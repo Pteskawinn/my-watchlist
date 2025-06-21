@@ -366,6 +366,11 @@ document.addEventListener('DOMContentLoaded', () => {
         addItemForm.reset();
         apiSearchResults.innerHTML = '';
         addItemModal.style.display = 'block';
+        
+        // Tarayıcının render etmesine zaman tanımak için scrollTop'u bir timeout içine al
+        setTimeout(() => {
+            addItemModal.scrollTop = 0;
+        }, 0);
 
         if (item) {
             addItemModalTitle.textContent = 'Edit Item';
@@ -386,6 +391,8 @@ document.addEventListener('DOMContentLoaded', () => {
             addItemForm.querySelector('button[type="submit"]').textContent = 'Add Item';
             currentlyEditingId = null;
         }
+
+        itemDetailModal.style.display = 'block';
     };
 
     // Detay Modalını Açma
@@ -418,11 +425,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Modalları Kapatma
     const closeModal = () => {
-        if(addItemModal.style.display === 'block'){
-             setTimeout(() => {
-                addItemModal.scrollTop = 0;
-            }, 0);
-        }
         addItemModal.style.display = 'none';
         itemDetailModal.style.display = 'none';
         if(statsModal) statsModal.style.display = 'none';
