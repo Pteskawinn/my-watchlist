@@ -366,11 +366,16 @@ document.addEventListener('DOMContentLoaded', () => {
         addItemForm.reset();
         apiSearchResults.innerHTML = '';
         addItemModal.style.display = 'block';
-        
-        // Tarayıcının render etmesine zaman tanımak için scrollTop'u bir timeout içine al
+
+        // Tarayıcının modalı render etmesi ve klavye gibi UI elementlerini
+        // hazırlaması için kısa bir gecikme (100ms) ekle. Bu, mobil cihazlarda
+        // kararlılığı artırır.
         setTimeout(() => {
+            // Önce scroll'u en üste al
             addItemModal.scrollTop = 0;
-        }, 0);
+            // Sonra ilk input'a odaklanarak tarayıcıyı en üste zorla
+            itemTitle.focus();
+        }, 100);
 
         if (item) {
             addItemModalTitle.textContent = 'Edit Item';

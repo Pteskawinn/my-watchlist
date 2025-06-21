@@ -1,4 +1,4 @@
-const CACHE_NAME = 'my-watchlist-v1.6';
+const CACHE_NAME = 'my-watchlist-v1.7';
 const urlsToCache = [
   '/',
   '/index.html',
