@@ -365,7 +365,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const openAddModal = (item) => {
         addItemForm.reset();
         apiSearchResults.innerHTML = '';
-        addItemModal.scrollTop = 0;
+        
+        // Önce modalı görünür yap, sonra scroll pozisyonunu ayarla
+        addItemModal.style.display = 'block';
+        addItemModal.scrollTop = 0; 
 
         if (item) {
             addItemModalTitle.textContent = 'Edit Item';
@@ -386,7 +389,6 @@ document.addEventListener('DOMContentLoaded', () => {
             addItemForm.querySelector('button[type="submit"]').textContent = 'Add Item';
             currentlyEditingId = null;
         }
-        addItemModal.style.display = 'block';
     };
 
     // Detay Modalını Açma
