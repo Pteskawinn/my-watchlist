@@ -292,6 +292,28 @@
                         <input type="file" id="importFile" accept="application/json">
                         <button id="importBtn" class="btn-secondary">Import from File</button>
                     </div>
+                    <div class="setting-section danger-zone">
+                        <h3><i class="fas fa-exclamation-triangle"></i> Danger Zone</h3>
+                        <p>This action is irreversible. Please be certain before proceeding.</p>
+                        <button id="deleteAllBtn" class="btn-danger">Delete All Data</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal for Deleting All Data -->
+        <div id="confirmDeleteAllModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fas fa-exclamation-triangle"></i> Are you sure?</h2>
+                </div>
+                <div class="modal-body" style="padding: 20px;">
+                    <p>This will permanently delete all your watchlist data, including all items and activity. This action cannot be undone.</p>
+                    <p><strong>Do you want to proceed?</strong></p>
+                </div>
+                <div class="modal-actions">
+                    <button id="cancelDeleteAllBtn" class="btn-secondary">Cancel</button>
+                    <button id="confirmDeleteAllFinalBtn" class="btn-danger">Yes, Delete Everything</button>
                 </div>
             </div>
         </div>

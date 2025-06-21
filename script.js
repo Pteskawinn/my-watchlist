@@ -80,6 +80,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeTrailerModal = document.getElementById('closeTrailerModal');
     const trailerIframe = document.getElementById('trailerIframe');
 
+    // Delete All Data Elements
+    const deleteAllBtn = document.getElementById('deleteAllBtn');
+    const confirmDeleteAllModal = document.getElementById('confirmDeleteAllModal');
+    const cancelDeleteAllBtn = document.getElementById('cancelDeleteAllBtn');
+    const confirmDeleteAllFinalBtn = document.getElementById('confirmDeleteAllFinalBtn');
+
     // --- Veri ve Durum Yönetimi ---
     let items = JSON.parse(localStorage.getItem('watchlistItems')) || [];
     let currentlyEditingId = null;
@@ -616,7 +622,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Pencere dışına tıklayınca modalı kapatma
     window.addEventListener('click', e => {
-        if (e.target === addItemModal || e.target === itemDetailModal || e.target === statsModal || e.target === settingsModal || e.target === trailerModal) {
+        if (e.target === addItemModal || e.target === itemDetailModal || e.target === statsModal || e.target === settingsModal || e.target === trailerModal || e.target === confirmDeleteAllModal) {
             closeModal();
         }
         if (!apiSearchResults.contains(e.target) && e.target !== itemTitle) {
@@ -867,6 +873,41 @@ document.addEventListener('DOMContentLoaded', () => {
         closeTrailerModal.addEventListener('click', () => {
             trailerModal.style.display = 'none';
             trailerIframe.src = ''; // Video'yu durdur
+        });
+    }
+
+    // Delete All Data Logic
+    if(deleteAllBtn) {
+        deleteAllBtn.addEventListener('click', () => {
+            // Hide settings modal, show confirmation modal
+            settingsModal.style.display = 'none';
+            confirmDeleteAllModal.style.display = 'block';
+        });
+    }
+
+    if(cancelDeleteAllBtn) {
+        cancelDeleteAllBtn.addEventListener('click', () => {
+            confirmDeleteAllModal.style.display = 'none';
+        });
+    }
+
+    if(confirmDeleteAllFinalBtn) {
+        confirmDeleteAllFinalBtn.addEventListener('click', () => {
+            // Clear all data
+            items = [];
+            activityLog = [];
+
+            // Save empty arrays to localStorage
+            saveItems();
+            localStorage.setItem('activityLog', JSON.stringify(activityLog));
+
+            // Re-render UI
+            renderItems();
+            updateDashboard();
+
+            // Close all modals
+            closeModal();
+            confirmDeleteAllModal.style.display = 'none'; // Ensure it's hidden
         });
     }
 

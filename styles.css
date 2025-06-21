@@ -1099,3 +1099,33 @@ body {
     height: 100%;
     border: none;
 }
+
+.settings-content .danger-zone {
+    background-color: var(--danger-background);
+    border: 1px solid var(--danger-color);
+    border-radius: var(--border-radius);
+    padding: 15px;
+    margin-top: 20px;
+}
+
+.settings-content .danger-zone h3 {
+    color: var(--danger-color);
+    margin-top: 0;
+}
+
+.settings-content .danger-zone p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+#confirmDeleteAllModal .modal-content {
+    max-width: 450px;
+}
+
+#confirmDeleteAllModal .modal-header h2 {
+    color: var(--danger-color);
+}
+
+#confirmDeleteAllModal .modal-body strong {
+    color: var(--text-primary);
+}
