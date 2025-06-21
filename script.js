@@ -550,7 +550,9 @@ document.addEventListener('DOMContentLoaded', () => {
             resultEl.addEventListener('click', () => {
                 itemTitle.value = result.title;
                 if(result.total) itemTotal.value = result.total;
-                addItemForm.dataset.posterUrl = result.poster; // Poster URL'ini geçici olarak sakla
+                if (result.poster) {
+                    addItemForm.dataset.posterUrl = result.poster;
+                }
                 clearApiResults();
             });
             apiSearchResults.appendChild(resultEl);
