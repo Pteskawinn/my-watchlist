@@ -116,6 +116,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Fonksiyonlar ---
 
+    const showToast = (message, type = 'info', duration = 3000) => {
+        const toastContainer = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast toast--${type}`;
+        
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-times-circle',
+            info: 'fa-info-circle'
+        };
+
+        toast.innerHTML = `<i class="fas ${icons[type]}"></i> ${message}`;
+        toastContainer.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 100);
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+            toast.classList.add('hide');
+            toast.addEventListener('transitionend', () => toast.remove());
+        }, duration);
+    };
+
     const saveItems = () => {
         localStorage.setItem('watchlistItems', JSON.stringify(items));
     };
@@ -427,6 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     : item
             );
             addActivity('edit', newItemData.title, newItemData.type);
+            showToast('Item updated successfully!', 'success');
         } else {
             // Yeni ekleme - Duplication Check
             const isDuplicate = items.some(
@@ -442,6 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
             newItemData.id = Date.now();
             items.push(newItemData);
             addActivity('add', newItemData.title, newItemData.type);
+            showToast('Item added successfully!', 'success');
 
             // Automatically switch filters to show the new item
             navTabs.querySelector('.active').classList.remove('active');
@@ -493,69 +520,123 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const handleApiSearch = async () => {
-        const query = itemTitle.value;
-        const type = itemType.value;
-
+        const query = itemTitle.value.trim();
+    
         if (query.length < 3) {
             clearApiResults();
             return;
         }
-
-        let results = [];
+    
+        const tmdbMovieUrl = `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`;
+        const tmdbSeriesUrl = `${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`;
+        const jikanAnimeUrl = `${JIKAN_BASE_URL}/anime?q=${encodeURIComponent(query)}&limit=5`;
+        const jikanMangaUrl = `${JIKAN_BASE_URL}/manga?q=${encodeURIComponent(query)}&limit=5`;
+    
         try {
-            switch (type) {
-                case 'movie':
-                case 'series':
-                    const tmdbType = type === 'movie' ? 'movie' : 'tv';
-                    const tmdbRes = await fetch(`${TMDB_BASE_URL}/search/${tmdbType}?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`);
-                    const tmdbData = await tmdbRes.json();
-                    results = tmdbData.results.map(item => ({
-                        title: item.title || item.name,
-                        year: (item.release_date || item.first_air_date)?.split('-')[0] || 'N/A',
-                        poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',
-                        total: item.episode_count || (type === 'movie' ? 1 : undefined)
-                    }));
-                    break;
-                
-                case 'anime':
-                case 'manga':
-                case 'manhwa':
-                    const searchType = (type === 'manhwa') ? 'manga' : type;
-                    const jikanRes = await fetch(`${JIKAN_BASE_URL}/${searchType}?q=${encodeURIComponent(query)}&limit=10`);
-                    const jikanData = await jikanRes.json();
-                    results = jikanData.data.map(item => ({
-                        title: item.title,
-                        year: item.year || 'N/A',
-                        poster: item.images?.jpg?.image_url || '',
-                        total: item.episodes || item.chapters
-                    }));
-                    break;
+            const responses = await Promise.allSettled([
+                fetch(tmdbMovieUrl),
+                fetch(tmdbSeriesUrl),
+                fetch(jikanAnimeUrl),
+                fetch(jikanMangaUrl)
+            ]);
+    
+            const results = await Promise.all(
+                responses.map(res => res.status === 'fulfilled' && res.value.ok ? res.value.json() : Promise.resolve(null))
+            );
+    
+            let allResults = [];
+    
+            // TMDB Movies
+            if (results[0] && results[0].results) {
+                allResults.push(...results[0].results.map(item => ({
+                    type: 'movie',
+                    title: item.title,
+                    year: (item.release_date)?.split('-')[0] || 'N/A',
+                    poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',
+                    total: 1
+                })));
             }
+    
+            // TMDB Series
+            if (results[1] && results[1].results) {
+                allResults.push(...results[1].results.map(item => ({
+                    type: 'series',
+                    title: item.name,
+                    year: (item.first_air_date)?.split('-')[0] || 'N/A',
+                    poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',
+                    total: item.episode_count || undefined
+                })));
+            }
+    
+            // Jikan Anime
+            if (results[2] && results[2].data) {
+                allResults.push(...results[2].data.map(item => ({
+                    type: 'anime',
+                    title: item.title,
+                    year: item.year || 'N/A',
+                    poster: item.images?.jpg?.image_url || '',
+                    total: item.episodes
+                })));
+            }
+    
+            // Jikan Manga
+            if (results[3] && results[3].data) {
+                allResults.push(...results[3].data.map(item => ({
+                    type: 'manga',
+                    title: item.title,
+                    year: item.year || 'N/A',
+                    poster: item.images?.jpg?.image_url || '',
+                    total: item.chapters
+                })));
+            }
+            
+            // Filter out low-quality results (e.g., those without a year)
+            allResults = allResults.filter(result => result.year && result.year !== 'N/A');
+            
+            // Sort results alphabetically by title
+            allResults.sort((a, b) => a.title.localeCompare(b.title));
+
+            displayApiResults(allResults);
+    
         } catch (error) {
-            console.error('API search failed:', error);
+            console.error('Unified API search failed:', error);
             clearApiResults();
         }
-
-        displayApiResults(results);
     };
     
     const displayApiResults = (results) => {
         clearApiResults();
         if (!results || results.length === 0) return;
 
+        // Sort results alphabetically by title
+        results.sort((a, b) => a.title.localeCompare(b.title));
+
         results.slice(0, 10).forEach(result => {
             const resultEl = document.createElement('div');
             resultEl.className = 'api-result-item';
+
+            const typeDisplay = result.type.charAt(0).toUpperCase() + result.type.slice(1);
+            
+            const typeIcons = {
+                anime: 'fa-tv', movie: 'fa-film', series: 'fa-video', 
+                manga: 'fa-book-open', manhwa: 'fa-book', book: 'fa-bookmark'
+            };
+
+            const posterHtml = result.poster
+                ? `<img src="${result.poster}" alt="Poster">`
+                : `<div class="poster-placeholder"><i class="fas ${typeIcons[result.type] || 'fa-question-circle'}"></i></div>`;
+
             resultEl.innerHTML = `
-                <img src="${result.poster || 'https://via.placeholder.com/40x60?text=?'}" alt="Poster">
+                ${posterHtml}
                 <div class="api-result-info">
                     <h4>${result.title}</h4>
-                    <p>${result.year}</p>
+                    <p>${typeDisplay} - ${result.year}</p>
                 </div>
             `;
             resultEl.addEventListener('click', () => {
                 itemTitle.value = result.title;
-                if(result.total) itemTotal.value = result.total;
+                itemType.value = result.type;
+                itemTotal.value = result.total || '';
                 if (result.poster) {
                     addItemForm.dataset.posterUrl = result.poster;
                 }
@@ -566,17 +647,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     itemTitle.addEventListener('input', () => {
-        const type = itemType.value;
-        if (type === 'book') {
-            clearApiResults();
-            return;
-        }
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(handleApiSearch, 300);
     });
 
     itemType.addEventListener('change', () => {
-        itemTitle.value = '';
+        itemTotal.value = '';
+        delete addItemForm.dataset.posterUrl;
         clearApiResults();
     });
 
@@ -604,14 +681,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Detay modalı butonları
     deleteBtn.addEventListener('click', () => {
         if (!currentlyEditingId) return;
+
         const itemToDelete = items.find(i => i.id === currentlyEditingId);
-        if (itemToDelete && confirm(`Are you sure you want to delete "${itemToDelete.title}"?`)) {
-            addActivity('delete', itemToDelete.title, itemToDelete.type);
-            items = items.filter(item => item.id !== currentlyEditingId);
-            saveItems();
-            closeModal();
-            renderItems();
-        }
+        if (!itemToDelete) return;
+
+        addActivity('delete', itemToDelete.title, itemToDelete.type);
+        items = items.filter(item => item.id !== currentlyEditingId);
+        
+        saveItems();
+        closeModal();
+        renderItems();
+        updateDashboard();
+        showToast('Item deleted successfully.', 'success');
     });
 
     editBtn.addEventListener('click', () => {
@@ -814,12 +895,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         URL.revokeObjectURL(url);
         addActivity('export', 'Data exported', 'System');
+        showToast('Data exported successfully!', 'success');
     };
 
     const importData = () => {
         const file = importFile.files[0];
         if (!file) {
-            alert('Please select a file to import.');
+            showToast('Please select a file to import.', 'error');
             return;
         }
 
@@ -840,14 +922,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         renderItems();
                         updateDashboard();
                         
-                        alert('Data imported successfully!');
-                        closeModal();
+                        closeModal('settings');
+                        showToast('Data imported successfully!', 'success');
                     }
                 } else {
-                    alert('Invalid file format. The file does not seem to be a valid watchlist backup.');
+                    showToast('Invalid file format.', 'error');
                 }
             } catch (error) {
-                alert('An error occurred while reading the file. Make sure it is a valid JSON file.');
+                showToast('Error reading or parsing the file.', 'error');
                 console.error('Import error:', error);
             }
         };
@@ -899,7 +981,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Save empty arrays to localStorage
             saveItems();
-            localStorage.setItem('activityLog', JSON.stringify(activityLog));
+            localStorage.removeItem('activityLog');
 
             // Re-render UI
             renderItems();
@@ -908,6 +990,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Close all modals
             closeModal();
             confirmDeleteAllModal.style.display = 'none'; // Ensure it's hidden
+            showToast('All data has been deleted.', 'success');
         });
     }
 
