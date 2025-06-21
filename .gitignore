@@ -1,0 +1,23 @@
+# Gradle files
+.gradle
+build/
+app/build/
+
+# Local configuration
+*.iml
+.idea/
+gradle.properties
+local.properties
+
+# Keystore
+*.keystore
+android.keystore
+
+# Generated files
+app-release-bundle.aab
+app-release-signed.apk
+app-release-signed.apk.idsig
+app-release-unsigned-aligned.apk
+
+# Mac
+.DS_Store 

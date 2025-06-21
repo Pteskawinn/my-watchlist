@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#e50914"/>
+    <title>My Watchlist</title>
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo">
+                    <i class="fas fa-play-circle"></i>
+                    My Watchlist
+                </h1>
+                <div class="header-controls">
+                    <div class="search-container">
+                        <input type="text" id="searchInput" placeholder="Search for anime, movies, books...">
+                        <button id="searchBtn">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <button id="openStatsBtn" class="header-btn" title="View Dashboard">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
+                    <button id="openSettingsBtn" class="header-btn" title="Settings">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <button id="themeToggle" class="theme-toggle" title="Toggle theme">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button id="addItemBtn" class="add-item-btn">
+                        <i class="fas fa-plus"></i> <span>Add New</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-category="all">
+                <i class="fas fa-list"></i>
+                All Items
+            </button>
+            <button class="nav-tab" data-category="watching">
+                <i class="fas fa-play"></i>
+                Currently Watching
+            </button>
+            <button class="nav-tab" data-category="plan-to-watch">
+                <i class="fas fa-clock"></i>
+                Plan to Watch
+            </button>
+            <button class="nav-tab" data-category="completed">
+                <i class="fas fa-check-circle"></i>
+                Completed
+            </button>
+        </nav>
+
+        <!-- Advanced Filters and Sorting -->
+        <div class="advanced-filters">
+            <div class="filter-group">
+                <label for="sortSelect">Sort by:</label>
+                <select id="sortSelect" class="filter-select">
+                    <option value="date-added">Date Added</option>
+                    <option value="title">Title A-Z</option>
+                    <option value="rating">Rating (High to Low)</option>
+                    <option value="rating-low">Rating (Low to High)</option>
+                    <option value="progress">Progress</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="ratingFilter">Min Rating:</label>
+                <select id="ratingFilter" class="filter-select">
+                    <option value="0">Any Rating</option>
+                    <option value="5">5+ Stars</option>
+                    <option value="6">6+ Stars</option>
+                    <option value="7">7+ Stars</option>
+                    <option value="8">8+ Stars</option>
+                    <option value="9">9+ Stars</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="yearFilter">Year:</label>
+                <select id="yearFilter" class="filter-select">
+                    <option value="">Any Year</option>
+                    <option value="2024">2024</option>
+                    <option value="2023">2023</option>
+                    <option value="2022">2022</option>
+                    <option value="2021">2021</option>
+                    <option value="2020">2020</option>
+                </select>
+            </div>
+            <button id="clearFilters" class="clear-filters-btn">
+                <i class="fas fa-times"></i>
+                Clear Filters
+            </button>
+            <button id="selectModeBtn" class="select-mode-btn">
+                <i class="fas fa-check-square"></i> Select
+            </button>
+        </div>
+
+        <!-- Bulk Actions Bar -->
+        <div class="bulk-actions-bar" id="bulkActionsBar">
+            <span id="selectionCount">0 items selected</span>
+            <div class="bulk-actions-buttons">
+                <button class="bulk-action-btn" data-action="watching"><i class="fas fa-play"></i></button>
+                <button class="bulk-action-btn" data-action="completed"><i class="fas fa-check-circle"></i></button>
+                <button class="bulk-action-btn" data-action="plan-to-watch"><i class="fas fa-clock"></i></button>
+                <button class="bulk-action-btn danger" data-action="delete"><i class="fas fa-trash"></i></button>
+            </div>
+            <button id="cancelSelectModeBtn" class="cancel-select-btn">Cancel</button>
+        </div>
+
+        <!-- Categories -->
+        <div class="categories">
+            <button class="category-btn active" data-type="all">
+                <i class="fas fa-th"></i>
+                All
+            </button>
+            <button class="category-btn" data-type="anime">
+                <i class="fas fa-tv"></i>
+                Anime
+            </button>
+            <button class="category-btn" data-type="movie">
+                <i class="fas fa-film"></i>
+                Movies
+            </button>
+            <button class="category-btn" data-type="series">
+                <i class="fas fa-video"></i>
+                TV Series
+            </button>
+            <button class="category-btn" data-type="manga">
+                <i class="fas fa-book-open"></i>
+                Manga
+            </button>
+            <button class="category-btn" data-type="manhwa">
+                <i class="fas fa-book"></i>
+                Manhwa
+            </button>
+            <button class="category-btn" data-type="book">
+                <i class="fas fa-bookmark"></i>
+                Books
+            </button>
+        </div>
+
+        <!-- Content Grid -->
+        <main class="content-grid" id="contentGrid">
+            <!-- Items will be dynamically loaded here -->
+        </main>
+
+        <!-- Add Item Modal -->
+        <div id="addItemModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Add New Item</h2>
+                    <button class="close-btn" id="closeModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="addItemForm">
+                    <div class="form-group">
+                        <label for="itemTitle">Title</label>
+                        <input type="text" id="itemTitle" required autocomplete="off">
+                        <div id="apiSearchResults" class="api-search-results"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="itemType">Type</label>
+                        <select id="itemType" required>
+                            <option value="">Select Type</option>
+                            <option value="anime">Anime</option>
+                            <option value="movie">Movie</option>
+                            <option value="series">TV Series</option>
+                            <option value="manga">Manga</option>
+                            <option value="manhwa">Manhwa</option>
+                            <option value="book">Book</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="itemStatus">Status</label>
+                        <select id="itemStatus" required>
+                            <option value="">Select Status</option>
+                            <option value="watching">Currently Watching</option>
+                            <option value="plan-to-watch">Plan to Watch</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="itemProgress">Progress</label>
+                        <input type="number" id="itemProgress" min="0" placeholder="Current episode/chapter">
+                    </div>
+                    <div class="form-group">
+                        <label for="itemTotal">Total</label>
+                        <input type="number" id="itemTotal" min="0" placeholder="Total episodes/chapters">
+                    </div>
+                    <div class="form-group">
+                        <label for="itemRating">Rating (0-10)</label>
+                        <input type="number" id="itemRating" min="0" max="10" step="0.1" placeholder="e.g. 8.5">
+                    </div>
+                    <div class="form-group">
+                        <label for="itemNotes">Notes</label>
+                        <textarea id="itemNotes" rows="3" placeholder="Your thoughts..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="itemTrailer">Trailer URL (YouTube)</label>
+                        <input type="url" id="itemTrailer" placeholder="https://www.youtube.com/watch?v=...">
+                        <small style="color: var(--text-secondary); font-size: 0.8rem;">Paste a YouTube video URL to add a trailer</small>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="cancelBtn">Cancel</button>
+                        <button type="submit" class="btn-primary">Add Item</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Item Detail Modal -->
+        <div id="itemDetailModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="detailTitle">Item Details</h2>
+                    <button class="close-btn" id="closeDetailModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="item-details">
+                    <div class="item-poster">
+                        <img id="detailPoster" src="" alt="">
+                    </div>
+                    <div class="item-info">
+                        <div class="info-row">
+                            <span class="label">Type:</span>
+                            <span id="detailType"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Status:</span>
+                            <span id="detailStatus"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Progress:</span>
+                            <span id="detailProgress"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Rating:</span>
+                            <span id="detailRating"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Notes:</span>
+                            <p id="detailNotes"></p>
+                        </div>
+                        <div class="info-row" id="trailerRow" style="display: none;">
+                            <span class="label">Trailer:</span>
+                            <button id="watchTrailerBtn" class="btn-primary" style="padding: 8px 15px; font-size: 0.9rem;">
+                                <i class="fas fa-play"></i> Watch Trailer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-secondary" id="editBtn">Edit</button>
+                    <button class="btn-danger" id="deleteBtn">Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settingsModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fas fa-cog"></i> Settings</h2>
+                    <button class="close-btn" id="closeSettingsModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="settings-content">
+                    <div class="setting-section">
+                        <h3><i class="fas fa-file-export"></i> Export Data</h3>
+                        <p>Save your entire watchlist to a JSON file. You can import this file later to restore your data.</p>
+                        <button id="exportBtn" class="btn-primary">Export My Watchlist</button>
+                    </div>
+                    <div class="setting-section">
+                        <h3><i class="fas fa-file-import"></i> Import Data</h3>
+                        <p>Import a previously exported JSON file. <strong class="danger-text">Warning: This will overwrite your current watchlist.</strong></p>
+                        <input type="file" id="importFile" accept="application/json">
+                        <button id="importBtn" class="btn-secondary">Import from File</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trailer Modal -->
+        <div id="trailerModal" class="modal">
+            <div class="modal-content large">
+                <div class="modal-header">
+                    <h2><i class="fas fa-play-circle"></i> Watch Trailer</h2>
+                    <button class="close-btn" id="closeTrailerModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="trailer-content">
+                    <div class="video-container">
+                        <iframe id="trailerIframe" width="100%" height="400" frameborder="0" allowfullscreen></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Modal -->
+        <div id="statsModal" class="modal">
+            <div class="modal-content large">
+                <div class="modal-header">
+                    <h2><i class="fas fa-chart-bar"></i> Dashboard</h2>
+                    <button class="close-btn" id="closeStatsModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="dashboard-content" id="dashboardContentModal">
+                    <div class="stats-grid" id="statsGridModal">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-film"></i></div>
+                            <div class="stat-info"><h3 id="totalItemsModal">0</h3><p>Total</p></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                            <div class="stat-info"><h3 id="completedItemsModal">0</h3><p>Completed</p></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-play"></i></div>
+                            <div class="stat-info"><h3 id="watchingItemsModal">0</h3><p>Watching</p></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-star"></i></div>
+                            <div class="stat-info"><h3 id="avgRatingModal">0.0</h3><p>Avg Rating</p></div>
+                        </div>
+                    </div>
+                    <div class="recent-activity">
+                        <h3>Recent Activity</h3>
+                        <div id="recentActivityListModal" class="activity-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js" defer></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

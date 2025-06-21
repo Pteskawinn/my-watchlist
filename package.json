@@ -1,0 +1,37 @@
+{
+  "name": "my-watchlist",
+  "version": "1.0.0",
+  "description": "Track your favorite movies, TV shows, anime, and books",
+  "main": "index.html",
+  "scripts": {
+    "build": "bubblewrap build",
+    "update": "bubblewrap update",
+    "validate": "bubblewrap validate"
+  },
+  "bubblewrap": {
+    "packageId": "com.yourname.mywatchlist",
+    "host": "yourdomain.com",
+    "name": "My Watchlist",
+    "launcherName": "Watchlist",
+    "display": "standalone",
+    "themeColor": "#e50914",
+    "backgroundColor": "#141414",
+    "enableNotifications": true,
+    "shortcuts": [
+      {
+        "name": "Add New Item",
+        "shortName": "Add",
+        "url": "/?action=add",
+        "icons": [
+          {
+            "src": "icons/shortcut-add.png",
+            "sizes": "96x96"
+          }
+        ]
+      }
+    ]
+  },
+  "devDependencies": {
+    "@bubblewrap/cli": "^1.0.0"
+  }
+} 
