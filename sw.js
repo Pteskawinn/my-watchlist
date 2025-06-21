@@ -1,4 +1,4 @@
-const CACHE_NAME = 'my-watchlist-v1.0';
+const CACHE_NAME = 'my-watchlist-v1.1';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -27,12 +27,25 @@ self.addEventListener('install', event => {
 // Fetch event - serve from cache when offline
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
-      }
-    )
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.match(event.request).then(response => {
+        // Her zaman ağdan en güncelini almayı dene,
+        // başarısız olursa önbellekten sun (Stale-While-Revalidate stratejisi)
+        const fetchPromise = fetch(event.request).then(networkResponse => {
+          // İstek başarılıysa ve gezinme isteği değilse önbelleği güncelle
+          if (networkResponse && networkResponse.status === 200 && event.request.method === 'GET') {
+            cache.put(event.request, networkResponse.clone());
+          }
+          return networkResponse;
+        });
+
+        // Önbellekteki yanıtı hemen döndür, arka planda ağı kontrol et
+        return response || fetchPromise;
+      }).catch(() => {
+        // Hem önbellek hem de ağ başarısız olursa (örneğin çevrimdışı ve önbellekte yok)
+        // Burada bir fallback sayfası gösterebilirsiniz
+      });
+    })
   );
 });
 
