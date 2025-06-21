@@ -365,6 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const openAddModal = (item) => {
         addItemForm.reset();
         apiSearchResults.innerHTML = '';
+        addItemModal.scrollTop = 0;
 
         if (item) {
             addItemModalTitle.textContent = 'Edit Item';
