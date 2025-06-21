@@ -396,8 +396,6 @@ document.addEventListener('DOMContentLoaded', () => {
             addItemForm.querySelector('button[type="submit"]').textContent = 'Add Item';
             currentlyEditingId = null;
         }
-
-        itemDetailModal.style.display = 'block';
     };
 
     // Detay Modalını Açma
