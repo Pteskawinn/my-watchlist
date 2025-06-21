@@ -365,14 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const openAddModal = (item) => {
         addItemForm.reset();
         apiSearchResults.innerHTML = '';
-        
-        // Önce modalı görünür yap
         addItemModal.style.display = 'block';
-        
-        // Tarayıcının render etmesine zaman tanımak için setTimeout kullan
-        setTimeout(() => {
-            addItemModal.scrollTop = 0;
-        }, 0);
 
         if (item) {
             addItemModalTitle.textContent = 'Edit Item';
@@ -425,6 +418,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Modalları Kapatma
     const closeModal = () => {
+        if(addItemModal.style.display === 'block'){
+             setTimeout(() => {
+                addItemModal.scrollTop = 0;
+            }, 0);
+        }
         addItemModal.style.display = 'none';
         itemDetailModal.style.display = 'none';
         if(statsModal) statsModal.style.display = 'none';
