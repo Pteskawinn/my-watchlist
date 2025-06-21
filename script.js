@@ -366,9 +366,13 @@ document.addEventListener('DOMContentLoaded', () => {
         addItemForm.reset();
         apiSearchResults.innerHTML = '';
         
-        // Önce modalı görünür yap, sonra scroll pozisyonunu ayarla
+        // Önce modalı görünür yap
         addItemModal.style.display = 'block';
-        addItemModal.scrollTop = 0; 
+        
+        // Tarayıcının render etmesine zaman tanımak için setTimeout kullan
+        setTimeout(() => {
+            addItemModal.scrollTop = 0;
+        }, 0);
 
         if (item) {
             addItemModalTitle.textContent = 'Edit Item';
