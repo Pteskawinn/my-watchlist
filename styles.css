@@ -1256,3 +1256,48 @@ body {
 .toast i {
     font-size: 1.2rem;
 }
+
+/* Charts Section Styles */
+.charts-section {
+    display: flex;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.chart-container {
+    flex: 1;
+    background-color: var(--dark-color);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.chart-container h3 {
+    color: var(--text-color);
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    text-align: center;
+}
+
+.chart-container canvas {
+    width: 100% !important;
+    height: 300px !important;
+    max-height: 300px;
+}
+
+/* Mobile responsive for charts */
+@media (max-width: 768px) {
+    .charts-section {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .chart-container {
+        padding: 15px;
+    }
+    
+    .chart-container canvas {
+        height: 250px !important;
+        max-height: 250px;
+    }
+}

@@ -378,13 +378,23 @@
                         <h3>Recent Activity</h3>
                         <div id="recentActivityListModal" class="activity-list"></div>
                     </div>
+                    <div class="charts-section">
+                        <div class="chart-container">
+                            <h3>Stats by Status</h3>
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Stats by Type</h3>
+                            <canvas id="typeChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <div id="toast-container"></div>
-
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="script.js" defer></script>
     <script>
         if ('serviceWorker' in navigator) {

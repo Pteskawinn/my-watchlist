@@ -107,6 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Selection State
     let isSelectMode = false;
     let selectedItemIds = new Set();
+    let latestSearchId = 0;
 
     // Dashboard state
     let activityLog = JSON.parse(localStorage.getItem('activityLog')) || [];
@@ -117,6 +118,126 @@ document.addEventListener('DOMContentLoaded', () => {
     const JIKAN_BASE_URL = 'https://api.jikan.moe/v4';
 
     // --- Fonksiyonlar ---
+
+    // Chart creation functions
+    let statusChart = null;
+    let typeChart = null;
+
+    const createStatusChart = () => {
+        const statusCtx = document.getElementById('statusChart');
+        if (!statusCtx) return;
+
+        if (statusChart) {
+            statusChart.destroy();
+        }
+
+        const statusData = {
+            'watching': items.filter(item => item.status === 'watching').length,
+            'completed': items.filter(item => item.status === 'completed').length,
+            'plan-to-watch': items.filter(item => item.status === 'plan-to-watch').length
+        };
+
+        const labels = ['Watching', 'Completed', 'Plan to Watch'];
+        const data = [statusData['watching'], statusData['completed'], statusData['plan-to-watch']];
+        const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1'];
+
+        statusChart = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colors,
+                    borderWidth: 2,
+                    borderColor: 'var(--dark-color)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'var(--text-color)',
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    };
+
+    const createTypeChart = () => {
+        const typeCtx = document.getElementById('typeChart');
+        if (!typeCtx) return;
+
+        if (typeChart) {
+            typeChart.destroy();
+        }
+
+        const typeData = {};
+        items.forEach(item => {
+            typeData[item.type] = (typeData[item.type] || 0) + 1;
+        });
+
+        const labels = Object.keys(typeData).map(type => 
+            type.charAt(0).toUpperCase() + type.slice(1)
+        );
+        const data = Object.values(typeData);
+        const colors = ['#ff9ff3', '#54a0ff', '#5f27cd', '#00d2d3', '#ff9f43', '#10ac84'];
+
+        typeChart = new Chart(typeCtx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Number of Items',
+                    data: data,
+                    backgroundColor: colors.slice(0, labels.length),
+                    borderColor: colors.slice(0, labels.length),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: 'var(--text-color)',
+                            stepSize: 1
+                        },
+                        grid: {
+                            color: 'var(--border-color)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: 'var(--text-color)'
+                        },
+                        grid: {
+                            color: 'var(--border-color)'
+                        }
+                    }
+                }
+            }
+        });
+    };
+    
+    const updateCharts = () => {
+        createStatusChart();
+        createTypeChart();
+    };
 
     const showToast = (message, type = 'info', duration = 3000) => {
         const toastContainer = document.getElementById('toast-container');
@@ -189,6 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
         avgRatingModal.textContent = avgRatingValue;
         
         updateRecentActivity();
+        updateCharts();
     };
 
     const addActivity = (action, itemTitle, itemType) => {
@@ -544,87 +666,119 @@ document.addEventListener('DOMContentLoaded', () => {
         apiSearchResults.innerHTML = '';
     };
 
-    const handleApiSearch = async () => {
-        const query = itemTitle.value.trim();
+    const processTmdbMovies = (data) => {
+        if (!data || !data.results) return [];
+        return data.results.map(item => ({
+            type: 'movie',
+            title: item.title,
+            year: (item.release_date)?.split('-')[0] || '',
+            poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',
+            total: 1
+        }));
+    };
     
-        if (query.length < 3) {
+    const processTmdbSeries = (data) => {
+        if (!data || !data.results) return [];
+        return data.results.map(item => ({
+            type: 'series',
+            title: item.name,
+            year: (item.first_air_date)?.split('-')[0] || '',
+            poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',
+            total: undefined
+        }));
+    };
+    
+    const processJikanAnime = (data) => {
+        if (!data || !data.data) return [];
+        return data.data.map(item => ({
+            type: 'anime',
+            title: item.title,
+            year: item.year || (item.aired?.from ? new Date(item.aired.from).getFullYear() : ''),
+            poster: item.images?.jpg?.image_url || '',
+            total: item.episodes
+        }));
+    };
+    
+    const processJikanManga = (data) => {
+        if (!data || !data.data) return [];
+        const allowedTypes = ['manga', 'manhwa'];
+        return data.data
+            .filter(item => allowedTypes.includes(item.type.toLowerCase()))
+            .map(item => ({
+                type: item.type.toLowerCase(),
+                title: item.title,
+                year: item.published?.from ? new Date(item.published.from).getFullYear().toString() : '',
+                poster: item.images?.jpg?.image_url || '',
+                total: item.chapters
+            }));
+    };
+
+    const handleApiSearch = async () => {
+        latestSearchId++;
+        const currentSearchId = latestSearchId;
+        const query = itemTitle.value.trim();
+        const selectedType = itemType.value;
+    
+        if (query.length < 2) {
             clearApiResults();
             return;
         }
     
-        const tmdbMovieUrl = `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`;
-        const tmdbSeriesUrl = `${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`;
-        const jikanAnimeUrl = `${JIKAN_BASE_URL}/anime?q=${encodeURIComponent(query)}&limit=5`;
-        const jikanMangaUrl = `${JIKAN_BASE_URL}/manga?q=${encodeURIComponent(query)}&limit=5`;
+        let fetchPromises = [];
+    
+        // --- Build Fetch Promises based on selected type ---
+        if (selectedType === 'movie') {
+            console.log("Searching for MOVIE:", query);
+            fetchPromises.push(fetch(`${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`).then(res => res.ok ? res.json() : Promise.reject(`Movie API failed with status ${res.status}`)).then(processTmdbMovies));
+        } else if (selectedType === 'series') {
+            console.log("Searching for SERIES:", query);
+            fetchPromises.push(fetch(`${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`).then(res => res.ok ? res.json() : Promise.reject(`Series API failed with status ${res.status}`)).then(processTmdbSeries));
+        } else if (selectedType === 'anime') {
+            console.log("Searching for ANIME:", query);
+            fetchPromises.push(fetch(`${JIKAN_BASE_URL}/anime?q=${encodeURIComponent(query)}&limit=10`).then(res => res.ok ? res.json() : Promise.reject(`Anime API failed with status ${res.status}`)).then(processJikanAnime));
+        } else if (selectedType === 'manga' || selectedType === 'manhwa') {
+            console.log("Searching for MANGA/MANHWA:", query);
+            fetchPromises.push(fetch(`${JIKAN_BASE_URL}/manga?q=${encodeURIComponent(query)}&limit=10`).then(res => res.ok ? res.json() : Promise.reject(`Manga API failed with status ${res.status}`)).then(processJikanManga));
+        } else { // No type selected, search all
+            console.log("Searching ALL types for:", query);
+            fetchPromises.push(fetch(`${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`).then(res => res.ok ? res.json() : Promise.reject('Movie API failed')).then(processTmdbMovies));
+            fetchPromises.push(fetch(`${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`).then(res => res.ok ? res.json() : Promise.reject('Series API failed')).then(processTmdbSeries));
+            fetchPromises.push(fetch(`${JIKAN_BASE_URL}/anime?q=${encodeURIComponent(query)}&limit=5`).then(res => res.ok ? res.json() : Promise.reject('Anime API failed')).then(processJikanAnime));
+            fetchPromises.push(fetch(`${JIKAN_BASE_URL}/manga?q=${encodeURIComponent(query)}&limit=5`).then(res => res.ok ? res.json() : Promise.reject('Manga API failed')).then(processJikanManga));
+        }
     
         try {
-            const responses = await Promise.allSettled([
-                fetch(tmdbMovieUrl),
-                fetch(tmdbSeriesUrl),
-                fetch(jikanAnimeUrl),
-                fetch(jikanMangaUrl)
-            ]);
-    
-            const results = await Promise.all(
-                responses.map(res => res.status === 'fulfilled' && res.value.ok ? res.value.json() : Promise.resolve(null))
-            );
+            const resultsArrays = await Promise.allSettled(fetchPromises);
+            
+            if (currentSearchId !== latestSearchId) {
+                console.log("Stale search results ignored.");
+                return; 
+            }
     
             let allResults = [];
+            resultsArrays.forEach(promiseResult => {
+                if (promiseResult.status === 'fulfilled' && Array.isArray(promiseResult.value)) {
+                    allResults.push(...promiseResult.value);
+                } else if (promiseResult.status === 'rejected') {
+                    console.error("An API call failed:", promiseResult.reason);
+                }
+            });
     
-            // TMDB Movies
-            if (results[0] && results[0].results) {
-                allResults.push(...results[0].results.map(item => ({
-                    type: 'movie',
-                    title: item.title,
-                    year: (item.release_date)?.split('-')[0] || '',
-                    poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',
-                    total: 1
-                })));
+            console.log("Raw results from API(s):", allResults);
+    
+            // Final filtering
+            let finalResults = allResults.filter(result => result && result.title);
+            if (selectedType === 'manhwa') {
+                finalResults = finalResults.filter(r => r.type === 'manhwa');
+            } else if (selectedType === 'manga') {
+                finalResults = finalResults.filter(r => r.type === 'manga');
             }
     
-            // TMDB Series
-            if (results[1] && results[1].results) {
-                allResults.push(...results[1].results.map(item => ({
-                    type: 'series',
-                    title: item.name,
-                    year: (item.first_air_date)?.split('-')[0] || '',
-                    poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',
-                    total: item.episode_count || undefined
-                })));
-            }
-    
-            // Jikan Anime
-            if (results[2] && results[2].data) {
-                allResults.push(...results[2].data.map(item => ({
-                    type: 'anime',
-                    title: item.title,
-                    year: item.year || '',
-                    poster: item.images?.jpg?.image_url || '',
-                    total: item.episodes
-                })));
-            }
-    
-            // Jikan Manga
-            if (results[3] && results[3].data) {
-                allResults.push(...results[3].data.map(item => ({
-                    type: 'manga',
-                    title: item.title,
-                    year: item.year || '',
-                    poster: item.images?.jpg?.image_url || '',
-                    total: item.chapters
-                })));
-            }
-            
-            // Filter out low-quality results (e.g., those without a year)
-            allResults = allResults.filter(result => result.year && result.year !== 'N/A');
-            
-            // Sort results alphabetically by title
-            allResults.sort((a, b) => a.title.localeCompare(b.title));
-
-            displayApiResults(allResults);
+            console.log("Displaying final results:", finalResults);
+            displayApiResults(finalResults);
     
         } catch (error) {
-            console.error('Unified API search failed:', error);
+            console.error('API search failed catastrophically:', error);
             clearApiResults();
         }
     };
@@ -632,9 +786,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const displayApiResults = (results) => {
         clearApiResults();
         if (!results || results.length === 0) return;
-
-        // Sort results alphabetically by title
-        results.sort((a, b) => a.title.localeCompare(b.title));
 
         results.slice(0, 10).forEach(result => {
             const resultEl = document.createElement('div');
@@ -679,8 +830,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     itemType.addEventListener('change', () => {
         itemTotal.value = '';
+        itemYear.value = '';
         delete addItemForm.dataset.posterUrl;
         clearApiResults();
+        // If there is already text in the title, re-trigger the search with the new type
+        if(itemTitle.value.trim().length > 1) {
+            handleApiSearch();
+        }
     });
 
     // Automatically set progress to total when status is 'completed'
