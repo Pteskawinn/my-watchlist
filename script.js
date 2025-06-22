@@ -113,9 +113,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let activityLog = JSON.parse(localStorage.getItem('activityLog')) || [];
 
     // --- API Ayarları ---
-    const TMDB_API_KEY = 'd699b8b51274da65ee8af102a4825c61'; 
-    const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-    const JIKAN_BASE_URL = 'https://api.jikan.moe/v4';
+    // API Anahtarları ve URL'ler artık sunucu tarafındaki fonksiyonda yönetiliyor.
+    // const TMDB_API_KEY = 'd699b8b51274da65ee8af102a4825c61'; 
+    // const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+    // const JIKAN_BASE_URL = 'https://api.jikan.moe/v4';
 
     // --- Fonksiyonlar ---
 
@@ -700,91 +701,71 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     const processJikanManga = (data) => {
-        if (!data || !data.data) return [];
-        const allowedTypes = ['manga', 'manhwa'];
-        return data.data
-            .filter(item => allowedTypes.includes(item.type.toLowerCase()))
-            .map(item => ({
-                type: item.type.toLowerCase(),
-                title: item.title,
-                year: item.published?.from ? new Date(item.published.from).getFullYear().toString() : '',
-                poster: item.images?.jpg?.image_url || '',
-                total: item.chapters
-            }));
+        return data.data.map(item => ({
+            id: `manga-${item.mal_id}`,
+            title: item.title,
+            poster: item.images.jpg.large_image_url,
+            year: item.published.prop.from.year,
+            type: 'manga' // veya 'manhwa', 'book'
+        }));
     };
 
     const handleApiSearch = async () => {
-        latestSearchId++;
-        const currentSearchId = latestSearchId;
         const query = itemTitle.value.trim();
-        const selectedType = itemType.value;
-    
-        if (query.length < 2) {
+        const type = itemType.value;
+        if (query.length < 3 || !type) {
             clearApiResults();
             return;
         }
     
-        let fetchPromises = [];
-    
-        // --- Build Fetch Promises based on selected type ---
-        if (selectedType === 'movie') {
-            console.log("Searching for MOVIE:", query);
-            fetchPromises.push(fetch(`${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`).then(res => res.ok ? res.json() : Promise.reject(`Movie API failed with status ${res.status}`)).then(processTmdbMovies));
-        } else if (selectedType === 'series') {
-            console.log("Searching for SERIES:", query);
-            fetchPromises.push(fetch(`${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`).then(res => res.ok ? res.json() : Promise.reject(`Series API failed with status ${res.status}`)).then(processTmdbSeries));
-        } else if (selectedType === 'anime') {
-            console.log("Searching for ANIME:", query);
-            fetchPromises.push(fetch(`${JIKAN_BASE_URL}/anime?q=${encodeURIComponent(query)}&limit=10`).then(res => res.ok ? res.json() : Promise.reject(`Anime API failed with status ${res.status}`)).then(processJikanAnime));
-        } else if (selectedType === 'manga' || selectedType === 'manhwa') {
-            console.log("Searching for MANGA/MANHWA:", query);
-            fetchPromises.push(fetch(`${JIKAN_BASE_URL}/manga?q=${encodeURIComponent(query)}&limit=10`).then(res => res.ok ? res.json() : Promise.reject(`Manga API failed with status ${res.status}`)).then(processJikanManga));
-        } else { // No type selected, search all
-            console.log("Searching ALL types for:", query);
-            fetchPromises.push(fetch(`${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`).then(res => res.ok ? res.json() : Promise.reject('Movie API failed')).then(processTmdbMovies));
-            fetchPromises.push(fetch(`${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`).then(res => res.ok ? res.json() : Promise.reject('Series API failed')).then(processTmdbSeries));
-            fetchPromises.push(fetch(`${JIKAN_BASE_URL}/anime?q=${encodeURIComponent(query)}&limit=5`).then(res => res.ok ? res.json() : Promise.reject('Anime API failed')).then(processJikanAnime));
-            fetchPromises.push(fetch(`${JIKAN_BASE_URL}/manga?q=${encodeURIComponent(query)}&limit=5`).then(res => res.ok ? res.json() : Promise.reject('Manga API failed')).then(processJikanManga));
-        }
+        latestSearchId++;
+        const currentSearchId = latestSearchId;
     
         try {
-            const resultsArrays = await Promise.allSettled(fetchPromises);
+            // Yeni proxy sunucumuza istek atıyoruz
+            const response = await fetch(`/api/?type=${type}&query=${encodeURIComponent(query)}`);
             
             if (currentSearchId !== latestSearchId) {
-                console.log("Stale search results ignored.");
-                return; 
+                return; // Eski bir arama sonucunu işleme
+            }
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('API Error:', errorData.message);
+                showToast(`API Hatası: ${errorData.message}`, 'error');
+                clearApiResults();
+                return;
             }
     
-            let allResults = [];
-            resultsArrays.forEach(promiseResult => {
-                if (promiseResult.status === 'fulfilled' && Array.isArray(promiseResult.value)) {
-                    allResults.push(...promiseResult.value);
-                } else if (promiseResult.status === 'rejected') {
-                    console.error("An API call failed:", promiseResult.reason);
-                }
-            });
+            const data = await response.json();
+            let results = [];
     
-            console.log("Raw results from API(s):", allResults);
-    
-            // Final filtering
-            let finalResults = allResults.filter(result => result && result.title);
-            if (selectedType === 'manhwa') {
-                finalResults = finalResults.filter(r => r.type === 'manhwa');
-            } else if (selectedType === 'manga') {
-                finalResults = finalResults.filter(r => r.type === 'manga');
+            switch (type) {
+                case 'movie':
+                    results = processTmdbMovies(data);
+                    break;
+                case 'series':
+                    results = processTmdbSeries(data);
+                    break;
+                case 'anime':
+                    results = processJikanAnime(data);
+                    break;
+                case 'manga':
+                case 'manhwa':
+                case 'book':
+                    results = processJikanManga(data);
+                    break;
             }
-    
-            console.log("Displaying final results:", finalResults);
-            displayApiResults(finalResults);
-    
+            displayApiResults(results);
         } catch (error) {
-            console.error('API search failed catastrophically:', error);
+            console.error('Error fetching API data:', error);
+            showToast('Veri getirme başarısız oldu. Lütfen internet bağlantınızı kontrol edin.', 'error');
             clearApiResults();
         }
     };
     
     const displayApiResults = (results) => {
-        clearApiResults();
+        apiSearchResults.innerHTML = '';
         if (!results || results.length === 0) return;
 
         results.slice(0, 10).forEach(result => {
