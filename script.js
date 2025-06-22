@@ -670,43 +670,48 @@ document.addEventListener('DOMContentLoaded', () => {
     const processTmdbMovies = (data) => {
         if (!data || !data.results) return [];
         return data.results.map(item => ({
-            type: 'movie',
+            id: `movie-${item.id}`,
             title: item.title,
-            year: (item.release_date)?.split('-')[0] || '',
             poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',
-            total: 1
+            year: item.release_date ? item.release_date.split('-')[0] : '',
+            type: 'movie',
+            popularity: item.popularity || 0
         }));
     };
     
     const processTmdbSeries = (data) => {
         if (!data || !data.results) return [];
         return data.results.map(item => ({
-            type: 'series',
+            id: `series-${item.id}`,
             title: item.name,
-            year: (item.first_air_date)?.split('-')[0] || '',
             poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',
-            total: undefined
+            year: item.first_air_date ? item.first_air_date.split('-')[0] : '',
+            type: 'series',
+            popularity: item.popularity || 0
         }));
     };
     
     const processJikanAnime = (data) => {
         if (!data || !data.data) return [];
         return data.data.map(item => ({
-            type: 'anime',
+            id: `anime-${item.mal_id}`,
             title: item.title,
-            year: item.year || (item.aired?.from ? new Date(item.aired.from).getFullYear() : ''),
-            poster: item.images?.jpg?.image_url || '',
-            total: item.episodes
+            poster: item.images.jpg.large_image_url,
+            year: item.year,
+            type: 'anime',
+            popularity: item.members || 0
         }));
     };
     
     const processJikanManga = (data) => {
+        if (!data || !data.data) return [];
         return data.data.map(item => ({
             id: `manga-${item.mal_id}`,
             title: item.title,
             poster: item.images.jpg.large_image_url,
             year: item.published.prop.from.year,
-            type: 'manga' // veya 'manhwa', 'book'
+            type: 'manga',
+            popularity: item.members || 0
         }));
     };
 
@@ -718,23 +723,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const aTitle = a.title.toLowerCase();
             const bTitle = b.title.toLowerCase();
     
-            // Öncelik 1: Başlık arama terimiyle tam olarak eşleşiyorsa
-            if (aTitle === lowerQuery && bTitle !== lowerQuery) return -1;
-            if (bTitle === lowerQuery && aTitle !== lowerQuery) return 1;
+            // Öncelik 1: Başlık arama terimiyle tam olarak eşleşiyor mu?
+            const aIsExact = aTitle === lowerQuery;
+            const bIsExact = bTitle === lowerQuery;
+            if (aIsExact && !bIsExact) return -1;
+            if (bIsExact && !aIsExact) return 1;
     
-            // Öncelik 2: Başlık arama terimiyle başlıyorsa
+            // Öncelik 2: Popülerlik (en önemli kriter)
+            if (a.popularity !== b.popularity) {
+                return b.popularity - a.popularity; // Yüksek olan önce gelsin
+            }
+            
+            // Öncelik 3: Başlık arama terimiyle başlıyor mu? (Popülerlik aynı ise)
             const aStartsWith = aTitle.startsWith(lowerQuery);
             const bStartsWith = bTitle.startsWith(lowerQuery);
             if (aStartsWith && !bStartsWith) return -1;
             if (bStartsWith && !aStartsWith) return 1;
     
-            // Öncelik 3: Tür hiyerarşisi
+            // Öncelik 4: Tür hiyerarşisi
             const aOrder = typeOrder[a.type] || 99;
             const bOrder = typeOrder[b.type] || 99;
             if (aOrder !== bOrder) return aOrder - bOrder;
     
-            // Öncelik 4: Popülerlik veya yıl (şimdilik aynı bırak)
-            return 0;
+            return 0; // Her şey aynı ise sıralamayı koru
         });
     
         return results;
