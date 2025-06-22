@@ -671,7 +671,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!data || !data.results) return [];
         return data.results.map(item => ({
             id: `movie-${item.id}`,
-            title: item.title,
+            title: item.title || 'Untitled',
             poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',
             year: item.release_date ? item.release_date.split('-')[0] : '',
             type: 'movie',
@@ -683,7 +683,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!data || !data.results) return [];
         return data.results.map(item => ({
             id: `series-${item.id}`,
-            title: item.name,
+            title: item.name || 'Untitled',
             poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',
             year: item.first_air_date ? item.first_air_date.split('-')[0] : '',
             type: 'series',
@@ -695,9 +695,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!data || !data.data) return [];
         return data.data.map(item => ({
             id: `anime-${item.mal_id}`,
-            title: item.title,
-            poster: item.images.jpg.large_image_url,
-            year: item.year,
+            title: item.title || 'Untitled',
+            poster: item.images?.jpg?.large_image_url || '',
+            year: item.year || '',
             type: 'anime',
             popularity: item.members || 0
         }));
@@ -707,9 +707,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!data || !data.data) return [];
         return data.data.map(item => ({
             id: `manga-${item.mal_id}`,
-            title: item.title,
-            poster: item.images.jpg.large_image_url,
-            year: item.published.prop.from.year,
+            title: item.title || 'Untitled',
+            poster: item.images?.jpg?.large_image_url || '',
+            year: item.published?.prop?.from?.year || '',
             type: 'manga',
             popularity: item.members || 0
         }));
