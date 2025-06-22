@@ -66,46 +66,53 @@
         </nav>
 
         <!-- Advanced Filters and Sorting -->
-        <div class="advanced-filters">
-            <div class="filter-group">
-                <label for="sortSelect">Sort by:</label>
-                <select id="sortSelect" class="filter-select">
-                    <option value="date-added">Date Added</option>
-                    <option value="title">Title A-Z</option>
-                    <option value="rating">Rating (High to Low)</option>
-                    <option value="rating-low">Rating (Low to High)</option>
-                    <option value="progress">Progress</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label for="ratingFilter">Min Rating:</label>
-                <select id="ratingFilter" class="filter-select">
-                    <option value="0">Any Rating</option>
-                    <option value="5">5+ Stars</option>
-                    <option value="6">6+ Stars</option>
-                    <option value="7">7+ Stars</option>
-                    <option value="8">8+ Stars</option>
-                    <option value="9">9+ Stars</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label for="yearFilter">Year:</label>
-                <select id="yearFilter" class="filter-select">
-                    <option value="">Any Year</option>
-                    <option value="2024">2024</option>
-                    <option value="2023">2023</option>
-                    <option value="2022">2022</option>
-                    <option value="2021">2021</option>
-                    <option value="2020">2020</option>
-                </select>
-            </div>
-            <button id="clearFilters" class="clear-filters-btn">
-                <i class="fas fa-times"></i>
-                Clear Filters
+        <div class="advanced-filters-container">
+            <button id="toggleFiltersBtn" class="toggle-filters-btn">
+                <i class="fas fa-filter"></i>
+                <span>Filter & Sort</span>
             </button>
-            <button id="selectModeBtn" class="select-mode-btn">
-                <i class="fas fa-check-square"></i> Select
-            </button>
+            <div class="advanced-filters">
+                <div class="filter-group">
+                    <label for="sortSelect">Sort by:</label>
+                    <select id="sortSelect" class="filter-select">
+                        <option value="date-added">Date Added</option>
+                        <option value="title">Title A-Z</option>
+                        <option value="rating">Rating (High to Low)</option>
+                        <option value="rating-low">Rating (Low to High)</option>
+                        <option value="progress">Progress</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="ratingFilter">Min Rating:</label>
+                    <select id="ratingFilter" class="filter-select">
+                        <option value="0">Any Rating</option>
+                        <option value="1">1+ Star</option>
+                        <option value="2">2+ Stars</option>
+                        <option value="3">3+ Stars</option>
+                        <option value="4">4+ Stars</option>
+                        <option value="5">5+ Stars</option>
+                        <option value="6">6+ Stars</option>
+                        <option value="7">7+ Stars</option>
+                        <option value="8">8+ Stars</option>
+                        <option value="9">9+ Stars</option>
+                        <option value="10">10 Stars</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="yearFilter">Year:</label>
+                    <select id="yearFilter" class="filter-select">
+                        <option value="">Any Year</option>
+                        <!-- Years will be populated by JavaScript -->
+                    </select>
+                </div>
+                <button id="clearFilters" class="clear-filters-btn">
+                    <i class="fas fa-times"></i>
+                    Clear Filters
+                </button>
+                <button id="selectModeBtn" class="select-mode-btn">
+                    <i class="fas fa-check-square"></i> Select
+                </button>
+            </div>
         </div>
 
         <!-- Bulk Actions Bar -->
@@ -200,6 +207,10 @@
                     <div class="form-group">
                         <label for="itemTotal">Total</label>
                         <input type="number" id="itemTotal" min="0" placeholder="Total episodes/chapters">
+                    </div>
+                    <div class="form-group">
+                        <label for="itemYear">Year</label>
+                        <input type="number" id="itemYear" min="1900" max="2099" placeholder="e.g. 2023">
                     </div>
                     <div class="form-group">
                         <label for="itemRating">Rating (0-10)</label>

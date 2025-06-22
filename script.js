@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const yearFilter = document.getElementById('yearFilter');
     const clearFiltersBtn = document.getElementById('clearFilters');
     const themeToggle = document.getElementById('themeToggle');
+    const toggleFiltersBtn = document.getElementById('toggleFiltersBtn');
+    const advancedFilters = document.querySelector('.advanced-filters');
     
     // Dashboard Elements
     const openStatsBtn = document.getElementById('openStatsBtn');
@@ -59,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const itemStatus = document.getElementById('itemStatus');
     const itemProgress = document.getElementById('itemProgress');
     const itemTotal = document.getElementById('itemTotal');
+    const itemYear = document.getElementById('itemYear');
     const itemRating = document.getElementById('itemRating');
     const itemNotes = document.getElementById('itemNotes');
     const itemTrailer = document.getElementById('itemTrailer');
@@ -109,7 +112,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let activityLog = JSON.parse(localStorage.getItem('activityLog')) || [];
 
     // --- API Ayarları ---
-    // ÖNEMLİ: Bu anahtarı kendi TMDB API anahtarınızla değiştirin.
     const TMDB_API_KEY = 'd699b8b51274da65ee8af102a4825c61'; 
     const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
     const JIKAN_BASE_URL = 'https://api.jikan.moe/v4';
@@ -160,6 +162,17 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.setAttribute('data-theme', currentTheme);
         const icon = themeToggle.querySelector('i');
         icon.className = currentTheme === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
+    };
+
+    const populateYearFilter = () => {
+        const currentFullYear = new Date().getFullYear();
+        const startYear = Math.floor(currentFullYear / 5) * 5; 
+        for (let year = startYear; year >= 1975; year -= 5) {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = `${year}+`;
+            yearFilter.appendChild(option);
+        }
     };
 
     // Dashboard Functions
@@ -258,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const typeMatch = currentTypeFilter === 'all' || item.type === currentTypeFilter;
             const searchMatch = searchInput.value === '' || item.title.toLowerCase().includes(searchInput.value.toLowerCase());
             const ratingMatch = item.rating >= currentMinRating;
-            const yearMatch = currentYear === '' || (item.year && item.year.toString() === currentYear);
+            const yearMatch = currentYear === '' || (item.year && parseInt(item.year, 10) >= parseInt(currentYear, 10));
             
             return statusMatch && typeMatch && searchMatch && ratingMatch && yearMatch;
         });
@@ -388,6 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
             itemStatus.value = item.status;
             itemProgress.value = item.progress;
             itemTotal.value = item.total;
+            itemYear.value = item.year || '';
             itemRating.value = item.rating;
             itemNotes.value = item.notes;
             itemTrailer.value = item.trailerUrl || '';
@@ -447,6 +461,7 @@ document.addEventListener('DOMContentLoaded', () => {
             status: itemStatus.value,
             progress: itemProgress.value,
             total: itemTotal.value,
+            year: itemYear.value,
             rating: parseFloat(itemRating.value) || 0,
             notes: itemNotes.value.trim(),
             posterUrl: addItemForm.dataset.posterUrl || '',
@@ -561,7 +576,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 allResults.push(...results[0].results.map(item => ({
                     type: 'movie',
                     title: item.title,
-                    year: (item.release_date)?.split('-')[0] || 'N/A',
+                    year: (item.release_date)?.split('-')[0] || '',
                     poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',
                     total: 1
                 })));
@@ -572,7 +587,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 allResults.push(...results[1].results.map(item => ({
                     type: 'series',
                     title: item.name,
-                    year: (item.first_air_date)?.split('-')[0] || 'N/A',
+                    year: (item.first_air_date)?.split('-')[0] || '',
                     poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',
                     total: item.episode_count || undefined
                 })));
@@ -583,7 +598,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 allResults.push(...results[2].data.map(item => ({
                     type: 'anime',
                     title: item.title,
-                    year: item.year || 'N/A',
+                    year: item.year || '',
                     poster: item.images?.jpg?.image_url || '',
                     total: item.episodes
                 })));
@@ -594,7 +609,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 allResults.push(...results[3].data.map(item => ({
                     type: 'manga',
                     title: item.title,
-                    year: item.year || 'N/A',
+                    year: item.year || '',
                     poster: item.images?.jpg?.image_url || '',
                     total: item.chapters
                 })));
@@ -647,6 +662,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 itemTitle.value = result.title;
                 itemType.value = result.type;
                 itemTotal.value = result.total || '';
+                itemYear.value = result.year || '';
                 if (result.poster) {
                     addItemForm.dataset.posterUrl = result.poster;
                 }
@@ -776,6 +792,11 @@ document.addEventListener('DOMContentLoaded', () => {
             currentMinRating = 0;
             currentYear = '';
             renderItems();
+
+            // Mobilse ve filtreler açıksa, temizledikten sonra kapat
+            if (window.innerWidth <= 768 && advancedFilters.classList.contains('is-open')) {
+                advancedFilters.classList.remove('is-open');
+            }
         });
     }
 
@@ -1004,8 +1025,95 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Olay Dinleyicileri (Event Listeners) ---
+
+    const setupEventListeners = () => {
+        // Arama
+        searchBtn.addEventListener('click', () => renderItems(searchInput.value.trim()));
+        searchInput.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                renderItems(searchInput.value.trim());
+            }
+        });
+
+        // Navigasyon ve Filtreleme
+        navTabs.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                document.querySelector('.nav-tab.active').classList.remove('active');
+                e.target.classList.add('active');
+                currentStatusFilter = e.target.dataset.category;
+                renderItems();
+            }
+        });
+
+        categoryBtns.addEventListener('click', (e => {
+            const button = e.target.closest('.category-btn');
+            if (button) {
+                document.querySelector('.category-btn.active').classList.remove('active');
+                button.classList.add('active');
+                currentTypeFilter = button.dataset.type;
+                renderItems();
+            }
+        }));
+        
+        // Gelişmiş Filtreler
+        sortSelect.addEventListener('change', (e) => { currentSortBy = e.target.value; renderItems(); });
+        ratingFilter.addEventListener('change', (e) => { currentMinRating = parseInt(e.target.value, 10); renderItems(); });
+        yearFilter.addEventListener('change', (e) => { currentYear = e.target.value; renderItems(); });
+        clearFiltersBtn.addEventListener('click', () => {
+            sortSelect.value = 'date-added';
+            ratingFilter.value = '0';
+            yearFilter.value = '';
+            searchInput.value = '';
+            currentSortBy = 'date-added';
+            currentMinRating = 0;
+            currentYear = '';
+            renderItems();
+
+            // Mobilse ve filtreler açıksa, temizledikten sonra kapat
+            if (window.innerWidth <= 768 && advancedFilters.classList.contains('is-open')) {
+                advancedFilters.classList.remove('is-open');
+            }
+        });
+        
+        // Mobil Filtre Butonu
+        if (toggleFiltersBtn) {
+            toggleFiltersBtn.addEventListener('click', () => {
+                advancedFilters.classList.toggle('is-open');
+            });
+        }
+
+        // Modallar
+        addItemBtn.addEventListener('click', () => openAddModal());
+        closeModalBtn.addEventListener('click', closeModal);
+        closeDetailModalBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+        deleteBtn.addEventListener('click', () => {
+            if (!currentlyEditingId) return;
+
+            const itemToDelete = items.find(i => i.id === currentlyEditingId);
+            if (!itemToDelete) return;
+
+            addActivity('delete', itemToDelete.title, itemToDelete.type);
+            items = items.filter(item => item.id !== currentlyEditingId);
+            
+            saveItems();
+            closeModal();
+            renderItems();
+            updateDashboard();
+            showToast('Item deleted successfully.', 'success');
+        });
+        editBtn.addEventListener('click', () => {
+            const item = items.find(i => i.id === currentlyEditingId);
+            closeModal();
+            openAddModal(item);
+        });
+    };
+
     // --- Başlangıç ---
     initializeTheme();
+    populateYearFilter();
     renderItems();
-    updateDashboard(); // Initialize dashboard
+    updateDashboard();
+    setupEventListeners();
 }); 
