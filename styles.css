@@ -410,8 +410,7 @@ body {
 
 .item-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
-    border-color: var(--primary-color);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
 }
 
 .item-card-poster {
@@ -463,6 +462,67 @@ body {
     align-items: center;
     gap: 5px;
     color: var(--star-color);
+}
+
+/* --- İskelet Yükleyici (Skeleton Loader) --- */
+.skeleton-card {
+    background-color: var(--light-dark-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.skeleton-card .skeleton-poster {
+    width: 100%;
+    padding-top: 150%; /* 2:3 aspect ratio */
+    background-color: var(--border-color);
+}
+
+.skeleton-card .skeleton-info {
+    padding: 15px;
+}
+
+.skeleton-card .skeleton-title {
+    height: 20px;
+    background-color: var(--border-color);
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.skeleton-card .skeleton-footer {
+    height: 15px;
+    width: 60%;
+    background-color: var(--border-color);
+    border-radius: 4px;
+}
+
+.shimmer-wrapper {
+    position: relative;
+    overflow: hidden;
+}
+
+.shimmer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        100deg,
+        rgba(255, 255, 255, 0) 20%,
+        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0) 80%
+    );
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
 }
 
 /* --- Modal Stilleri --- */

@@ -385,85 +385,124 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${Math.floor(diffInSeconds / 86400)}d ago`;
     };
 
-    // İçerik kartlarını render etme
-    const renderItems = () => {
+    const renderSkeletons = (count) => {
         contentGrid.innerHTML = '';
-        
-        let filteredItems = items.filter(item => {
-            const statusMatch = currentStatusFilter === 'all' || item.status === currentStatusFilter;
-            const typeMatch = currentTypeFilter === 'all' || item.type === currentTypeFilter;
-            const searchMatch = searchInput.value === '' || item.title.toLowerCase().includes(searchInput.value.toLowerCase());
-            const ratingMatch = item.rating >= currentMinRating;
-            const yearMatch = currentYear === '' || (item.year && parseInt(item.year, 10) >= parseInt(currentYear, 10));
-            
-            return statusMatch && typeMatch && searchMatch && ratingMatch && yearMatch;
-        });
-
-        // Sorting
-        filteredItems.sort((a, b) => {
-            switch (currentSortBy) {
-                case 'title':
-                    return a.title.localeCompare(b.title);
-                case 'rating':
-                    return b.rating - a.rating;
-                case 'rating-low':
-                    return a.rating - b.rating;
-                case 'progress':
-                    const aProgress = (a.progress / a.total) || 0;
-                    const bProgress = (b.progress / b.total) || 0;
-                    return bProgress - aProgress;
-                case 'date-added':
-                default:
-                    return b.id - a.id;
-            }
-        });
-
-        if (filteredItems.length === 0) {
-            contentGrid.innerHTML = '<p style="color: var(--text-secondary); grid-column: 1 / -1; text-align: center;">No items found. Try changing your filters or adding a new item!</p>';
-            return;
-        }
-
-        filteredItems.forEach(item => {
-            const itemCard = document.createElement('div');
-            itemCard.className = 'item-card';
-            itemCard.dataset.id = item.id;
-            if(selectedItemIds.has(item.id)) {
-                itemCard.classList.add('selected');
-            }
-
-            const typeIcons = {
-                anime: 'fa-tv', movie: 'fa-film', series: 'fa-video', 
-                manga: 'fa-book-open', manhwa: 'fa-book', book: 'fa-bookmark'
-            };
-
-            const posterHtml = item.posterUrl 
-                ? `<img src="${item.posterUrl}" alt="${item.title}" loading="lazy" onerror="this.onerror=null; this.src='icons/icon-192x192.png'; this.classList.add('poster-placeholder');">`
-                : `<div class="poster-placeholder"><i class="fas ${typeIcons[item.type] || 'fa-question-circle'}"></i></div>`;
-
-            itemCard.innerHTML = `
-                <div class="item-card-poster">
-                    ${posterHtml}
+        for (let i = 0; i < count; i++) {
+            const skeletonCard = document.createElement('div');
+            skeletonCard.className = 'skeleton-card shimmer-wrapper';
+            skeletonCard.innerHTML = `
+                <div class="skeleton-poster"></div>
+                <div class="skeleton-info">
+                    <div class="skeleton-title"></div>
+                    <div class="skeleton-footer"></div>
                 </div>
-                <div class="item-card-info">
-                    <h3 class="item-card-title">${item.title}</h3>
-                    <div class="item-card-footer">
-                        <span class="item-card-type">${item.type.charAt(0).toUpperCase() + item.type.slice(1)}</span>
-                        <span class="item-card-rating">
-                            <i class="fas fa-star"></i>
-                            <span>${item.rating}/10</span>
-                        </span>
-                    </div>
-                </div>
+                <div class="shimmer"></div>
             `;
-            itemCard.addEventListener('click', () => {
-                if(isSelectMode) {
-                    toggleItemSelection(item.id, itemCard);
-                } else {
-                    openDetailModal(item.id);
+            contentGrid.appendChild(skeletonCard);
+        }
+    };
+
+    const renderItems = () => {
+        renderSkeletons(12); // Önce 12 iskelet kartı göster
+
+        // Gerçek veriyi render etme işlemini küçük bir gecikmeyle yapıyoruz ki 
+        // kullanıcı yükleme animasyonunu görebilsin.
+        setTimeout(() => {
+            const query = searchInput.value.toLowerCase().trim();
+            let filteredItems = items;
+    
+            // Arama filtresi
+            if (query) {
+                filteredItems = filteredItems.filter(item =>
+                    item.title.toLowerCase().includes(query)
+                );
+            }
+    
+            // Durum filtresi (watching, completed vb.)
+            if (currentStatusFilter !== 'all') {
+                filteredItems = filteredItems.filter(item => item.status === currentStatusFilter);
+            }
+    
+            // Tür filtresi (anime, movie vb.)
+            if (currentTypeFilter !== 'all') {
+                filteredItems = filteredItems.filter(item => item.type === currentTypeFilter);
+            }
+    
+            // Rating filtresi
+            if (currentMinRating > 0) {
+                filteredItems = filteredItems.filter(item => item.rating >= currentMinRating);
+            }
+    
+            // Yıl filtresi
+            if (currentYear) {
+                filteredItems = filteredItems.filter(item => item.year == currentYear);
+            }
+    
+            // Sıralama
+            filteredItems.sort((a, b) => {
+                switch (currentSortBy) {
+                    case 'title':
+                        return a.title.localeCompare(b.title);
+                    case 'rating':
+                        return (b.rating || 0) - (a.rating || 0);
+                    case 'rating-low':
+                        return (a.rating || 0) - (b.rating || 0);
+                    case 'progress':
+                         return (b.progress / b.total * 100) - (a.progress / a.total * 100);
+                    default: // date-added
+                        return new Date(b.dateAdded) - new Date(a.dateAdded);
                 }
             });
-            contentGrid.appendChild(itemCard);
-        });
+    
+            contentGrid.innerHTML = '';
+    
+            if (filteredItems.length === 0) {
+                contentGrid.innerHTML = '<p class="empty-message">No items found. Try different filters or add a new item!</p>';
+                return;
+            }
+    
+            filteredItems.forEach(item => {
+                const itemCard = document.createElement('div');
+                itemCard.className = 'item-card';
+                itemCard.dataset.id = item.id;
+                if(selectedItemIds.has(item.id)) {
+                    itemCard.classList.add('selected');
+                }
+
+                const typeIcons = {
+                    anime: 'fa-tv', movie: 'fa-film', series: 'fa-video', 
+                    manga: 'fa-book-open', manhwa: 'fa-book', book: 'fa-bookmark'
+                };
+
+                const posterHtml = item.posterUrl 
+                    ? `<img src="${item.posterUrl}" alt="${item.title}" loading="lazy" onerror="this.onerror=null; this.src='icons/icon-192x192.png'; this.classList.add('poster-placeholder');">`
+                    : `<div class="poster-placeholder"><i class="fas ${typeIcons[item.type] || 'fa-question-circle'}"></i></div>`;
+
+                itemCard.innerHTML = `
+                    <div class="item-card-poster">
+                        ${posterHtml}
+                    </div>
+                    <div class="item-card-info">
+                        <h3 class="item-card-title">${item.title}</h3>
+                        <div class="item-card-footer">
+                            <span class="item-card-type">${item.type.charAt(0).toUpperCase() + item.type.slice(1)}</span>
+                            <span class="item-card-rating">
+                                <i class="fas fa-star"></i>
+                                <span>${item.rating}/10</span>
+                            </span>
+                        </div>
+                    </div>
+                `;
+                itemCard.addEventListener('click', () => {
+                    if(isSelectMode) {
+                        toggleItemSelection(item.id, itemCard);
+                    } else {
+                        openDetailModal(item.id);
+                    }
+                });
+                contentGrid.appendChild(itemCard);
+            });
+        }, 200); // 200ms gecikme
     };
 
     // YouTube URL'ini embed URL'ine çevirme
