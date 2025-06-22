@@ -437,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             const posterHtml = item.posterUrl 
-                ? `<img src="${item.posterUrl}" alt="${item.title}">`
+                ? `<img src="${item.posterUrl}" alt="${item.title}" loading="lazy" onerror="this.onerror=null; this.src='icons/icon-192x192.png'; this.classList.add('poster-placeholder');">`
                 : `<div class="poster-placeholder"><i class="fas ${typeIcons[item.type] || 'fa-question-circle'}"></i></div>`;
 
             itemCard.innerHTML = `
@@ -801,39 +801,27 @@ document.addEventListener('DOMContentLoaded', () => {
         apiSearchResults.innerHTML = '';
         if (!results || results.length === 0) return;
 
-        results.slice(0, 10).forEach(result => {
-            const resultEl = document.createElement('div');
-            resultEl.className = 'api-result-item';
-
-            const typeDisplay = result.type.charAt(0).toUpperCase() + result.type.slice(1);
-            
-            const typeIcons = {
-                anime: 'fa-tv', movie: 'fa-film', series: 'fa-video', 
-                manga: 'fa-book-open', manhwa: 'fa-book', book: 'fa-bookmark'
-            };
-
-            const posterHtml = result.poster
-                ? `<img src="${result.poster}" alt="Poster">`
-                : `<div class="poster-placeholder"><i class="fas ${typeIcons[result.type] || 'fa-question-circle'}"></i></div>`;
-
-            resultEl.innerHTML = `
-                ${posterHtml}
+        results.forEach(item => {
+            const resultItem = document.createElement('div');
+            resultItem.className = 'api-result-item';
+            resultItem.innerHTML = `
+                <img src="${item.poster || 'icons/icon-192x192.png'}" alt="${item.title}" loading="lazy" onerror="this.onerror=null; this.src='icons/icon-192x192.png'; this.classList.add('poster-placeholder');">
                 <div class="api-result-info">
-                    <h4>${result.title}</h4>
-                    <p>${typeDisplay} - ${result.year}</p>
+                    <h4>${item.title}</h4>
+                    <p>${item.type.charAt(0).toUpperCase() + item.type.slice(1)} - ${item.year || 'N/A'}</p>
                 </div>
             `;
-            resultEl.addEventListener('click', () => {
-                itemTitle.value = result.title;
-                itemType.value = result.type;
-                itemTotal.value = result.total || '';
-                itemYear.value = result.year || '';
-                if (result.poster) {
-                    addItemForm.dataset.posterUrl = result.poster;
+            resultItem.addEventListener('click', () => {
+                itemTitle.value = item.title;
+                itemType.value = item.type;
+                itemTotal.value = item.total || '';
+                itemYear.value = item.year || '';
+                if (item.poster) {
+                    addItemForm.dataset.posterUrl = item.poster;
                 }
                 clearApiResults();
             });
-            apiSearchResults.appendChild(resultEl);
+            apiSearchResults.appendChild(resultItem);
         });
     };
 
