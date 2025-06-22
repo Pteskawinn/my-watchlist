@@ -710,10 +710,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
     };
 
+    const sortApiResults = (results, query) => {
+        const typeOrder = { 'anime': 1, 'series': 2, 'manga': 3, 'movie': 4 };
+        const lowerQuery = query.toLowerCase();
+    
+        results.sort((a, b) => {
+            const aTitle = a.title.toLowerCase();
+            const bTitle = b.title.toLowerCase();
+    
+            // Öncelik 1: Başlık arama terimiyle tam olarak eşleşiyorsa
+            if (aTitle === lowerQuery && bTitle !== lowerQuery) return -1;
+            if (bTitle === lowerQuery && aTitle !== lowerQuery) return 1;
+    
+            // Öncelik 2: Başlık arama terimiyle başlıyorsa
+            const aStartsWith = aTitle.startsWith(lowerQuery);
+            const bStartsWith = bTitle.startsWith(lowerQuery);
+            if (aStartsWith && !bStartsWith) return -1;
+            if (bStartsWith && !aStartsWith) return 1;
+    
+            // Öncelik 3: Tür hiyerarşisi
+            const aOrder = typeOrder[a.type] || 99;
+            const bOrder = typeOrder[b.type] || 99;
+            if (aOrder !== bOrder) return aOrder - bOrder;
+    
+            // Öncelik 4: Popülerlik veya yıl (şimdilik aynı bırak)
+            return 0;
+        });
+    
+        return results;
+    };
+
     const handleApiSearch = async () => {
         const query = itemTitle.value.trim();
-        const type = itemType.value;
-        if (query.length < 3 || !type) {
+        // Artık arama için 'type' gerekli değil, çünkü evrensel arama yapıyoruz.
+        if (query.length < 3) {
             clearApiResults();
             return;
         }
@@ -722,41 +752,34 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentSearchId = latestSearchId;
     
         try {
-            // Yeni proxy sunucumuza istek atıyoruz
-            const response = await fetch(`/api/?type=${type}&query=${encodeURIComponent(query)}`);
+            // Yeni evrensel arama proxy'mize istek atıyoruz
+            const response = await fetch(`/api/?query=${encodeURIComponent(query)}`);
             
-            if (currentSearchId !== latestSearchId) {
-                return; // Eski bir arama sonucunu işleme
-            }
+            if (currentSearchId !== latestSearchId) return;
 
             if (!response.ok) {
                 const errorData = await response.json();
                 console.error('API Error:', errorData.message);
-                showToast(`API Hatası: ${errorData.message}`, 'error');
+                showToast(`API Hatası: ${errorData.message || 'Bilinmeyen bir hata oluştu.'}`, 'error');
                 clearApiResults();
                 return;
             }
     
             const data = await response.json();
-            let results = [];
-    
-            switch (type) {
-                case 'movie':
-                    results = processTmdbMovies(data);
-                    break;
-                case 'series':
-                    results = processTmdbSeries(data);
-                    break;
-                case 'anime':
-                    results = processJikanAnime(data);
-                    break;
-                case 'manga':
-                case 'manhwa':
-                case 'book':
-                    results = processJikanManga(data);
-                    break;
-            }
-            displayApiResults(results);
+            
+            // Tüm sonuçları tek bir dizide birleştir
+            let allResults = [
+                ...processTmdbMovies(data.movies || { results: [] }),
+                ...processTmdbSeries(data.series || { results: [] }),
+                ...processJikanAnime(data.anime || { data: [] }),
+                ...processJikanManga(data.manga || { data: [] })
+            ];
+
+            // Akıllı sıralamayı uygula
+            const sortedResults = sortApiResults(allResults, query);
+            
+            displayApiResults(sortedResults);
+
         } catch (error) {
             console.error('Error fetching API data:', error);
             showToast('Veri getirme başarısız oldu. Lütfen internet bağlantınızı kontrol edin.', 'error');

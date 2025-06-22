@@ -6,46 +6,52 @@ const JIKAN_BASE_URL = 'https://api.jikan.moe/v4';
 
 exports.handler = async function(event, context) {
     const query = event.queryStringParameters.query;
-    const type = event.queryStringParameters.type;
 
-    let url = '';
+    if (!query) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({ message: 'Query parameter is required' })
+        };
+    }
+
+    const encodedQuery = encodeURIComponent(query);
+
+    const urls = {
+        movies: `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodedQuery}&language=en-US&page=1&include_adult=false`,
+        series: `${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&query=${encodedQuery}&language=en-US&page=1&include_adult=false`,
+        anime: `${JIKAN_BASE_URL}/anime?q=${encodedQuery}&limit=10`,
+        manga: `${JIKAN_BASE_URL}/manga?q=${encodedQuery}&limit=10`
+    };
+
+    const fetchPromises = Object.entries(urls).map(([key, url]) => 
+        fetch(url).then(response => {
+            if (!response.ok) return Promise.reject(`API for ${key} failed`);
+            return response.json();
+        }).then(data => ({ key, data }))
+    );
 
     try {
-        switch (type) {
-            case 'movie':
-                url = `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${query}&language=en-US&page=1&include_adult=false`;
-                break;
-            case 'series':
-                url = `${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&query=${query}&language=en-US&page=1&include_adult=false`;
-                break;
-            case 'anime':
-                url = `${JIKAN_BASE_URL}/anime?q=${query}&limit=10`;
-                break;
-            case 'manga':
-            case 'manhwa':
-            case 'book': // Jikan manga endpoint can be a proxy for these
-                url = `${JIKAN_BASE_URL}/manga?q=${query}&limit=10`;
-                break;
-            default:
-                return {
-                    statusCode: 400,
-                    body: JSON.stringify({ message: 'Invalid type specified' })
-                };
-        }
+        const results = await Promise.allSettled(fetchPromises);
+        
+        const combinedData = {
+            movies: { results: [] },
+            series: { results: [] },
+            anime: { data: [] },
+            manga: { data: [] }
+        };
 
-        const response = await fetch(url);
-        if (!response.ok) {
-            // Passthrough the error from the external API
-            return { 
-                statusCode: response.status, 
-                body: await response.text() 
-            };
-        }
-        const data = await response.json();
+        results.forEach(result => {
+            if (result.status === 'fulfilled') {
+                const { key, data } = result.value;
+                combinedData[key] = data;
+            } else {
+                console.warn(`Failed to fetch from one of the APIs:`, result.reason);
+            }
+        });
 
         return {
             statusCode: 200,
-            body: JSON.stringify(data)
+            body: JSON.stringify(combinedData)
         };
 
     } catch (error) {
