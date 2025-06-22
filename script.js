@@ -742,7 +742,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const handleApiSearch = async () => {
         const query = itemTitle.value.trim();
-        // Artık arama için 'type' gerekli değil, çünkü evrensel arama yapıyoruz.
         if (query.length < 3) {
             clearApiResults();
             return;
@@ -1189,11 +1188,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const setupEventListeners = () => {
         // Arama
-        searchBtn.addEventListener('click', () => renderItems(searchInput.value.trim()));
-        searchInput.addEventListener('keyup', (e) => {
-            if (e.key === 'Enter') {
-                renderItems(searchInput.value.trim());
-            }
+        itemTitle.addEventListener('keyup', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(handleApiSearch, 300);
+        });
+        searchBtn.addEventListener('click', () => {
+            currentStatusFilter = 'all';
+            currentTypeFilter = 'all';
+            renderItems();
         });
 
         // Navigasyon ve Filtreleme
