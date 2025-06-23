@@ -726,7 +726,8 @@ document.addEventListener('DOMContentLoaded', () => {
             poster: item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : '',
             year: item.first_air_date ? item.first_air_date.split('-')[0] : '',
             type: 'series',
-            popularity: item.popularity || 0
+            popularity: item.popularity || 0,
+            total: item.number_of_episodes || null
         }));
     };
     
@@ -738,7 +739,8 @@ document.addEventListener('DOMContentLoaded', () => {
             poster: item.images?.jpg?.large_image_url || '',
             year: item.year || '',
             type: 'anime',
-            popularity: item.members || 0
+            popularity: item.members || 0,
+            total: item.episodes || null
         }));
     };
     
@@ -750,7 +752,8 @@ document.addEventListener('DOMContentLoaded', () => {
             poster: item.images?.jpg?.large_image_url || '',
             year: item.published?.prop?.from?.year || '',
             type: 'manga',
-            popularity: item.members || 0
+            popularity: item.members || 0,
+            total: item.chapters || null
         }));
     };
 
@@ -853,11 +856,13 @@ document.addEventListener('DOMContentLoaded', () => {
             resultItem.addEventListener('click', () => {
                 itemTitle.value = item.title;
                 itemType.value = item.type;
-                itemTotal.value = item.total || '';
                 itemYear.value = item.year || '';
-                if (item.poster) {
-                    addItemForm.dataset.posterUrl = item.poster;
-                }
+                itemTotal.value = item.total || '';
+                
+                // Diğer dataları da sakla
+                addItemForm.dataset.apiId = item.id; 
+                addItemForm.dataset.posterUrl = item.poster;
+                
                 clearApiResults();
             });
             apiSearchResults.appendChild(resultItem);
