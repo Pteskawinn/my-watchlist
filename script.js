@@ -813,7 +813,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
                 itemCard.addEventListener('click', () => {
-                    if(isSelectMode) {
+                    if (isSelectMode) {
                         toggleItemSelection(item.id, itemCard);
                     } else {
                         openDetailModal(item.id);
@@ -1367,12 +1367,23 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const toggleItemSelection = (itemId, itemCard) => {
+        const indicator = itemCard.querySelector('.selection-indicator');
+
         if (selectedItemIds.has(itemId)) {
             selectedItemIds.delete(itemId);
             itemCard.classList.remove('selected');
+            if (indicator) {
+                indicator.remove();
+            }
         } else {
             selectedItemIds.add(itemId);
             itemCard.classList.add('selected');
+            if (!indicator) {
+                const newIndicator = document.createElement('div');
+                newIndicator.className = 'selection-indicator';
+                newIndicator.innerHTML = `<i class="fas fa-check-circle"></i>`;
+                itemCard.appendChild(newIndicator);
+            }
         }
         updateBulkActionsBar();
     };
@@ -1388,34 +1399,44 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     const handleBulkAction = (action) => {
-        const selectedIds = Array.from(selectedItemIds);
-        if (selectedIds.length === 0) return;
+        if (selectedItemIds.size === 0) {
+            showToast('Please select items first.', 'info');
+            return;
+        }
+
+        const selectedItems = Array.from(selectedItemIds);
+        let updatedCount = 0;
 
         if (action === 'delete') {
-            if (confirm(`Are you sure you want to delete ${selectedIds.length} item(s)?`)) {
-                items = items.filter(item => !selectedIds.includes(item.id));
-                addActivity('delete', `${selectedIds.length} items`, 'Bulk Action');
-                saveItems();
-                toggleSelectMode();
-                renderItems();
+            if (!confirm(`Are you sure you want to delete ${selectedItems.length} items? This cannot be undone.`)) {
+                return;
             }
-        } else {
-            // It's a status update
-            items = items.map(item => {
-                if (selectedIds.includes(item.id)) {
-                    // When completing, also update progress
-                    if (action === 'completed' && item.total) {
-                        return { ...item, status: action, progress: item.total };
+            items = items.filter(item => !selectedItemIds.has(item.id));
+            updatedCount = selectedItems.length;
+            addActivity('delete-bulk', `${updatedCount} items`);
+
+        } else { // Handle status change
+            items.forEach(item => {
+                if (selectedItemIds.has(item.id)) {
+                    if(item.status !== action) {
+                        item.status = action;
+                        addActivity('edit-bulk', `Moved "${item.title}" to ${action.replace('-', ' ')}`);
+                        updatedCount++;
                     }
-                    return { ...item, status: action };
                 }
-                return item;
             });
-            addActivity('edit', `${selectedIds.length} items`, `Status changed to ${action}`);
-            saveItems();
-            toggleSelectMode(); 
-            renderItems();
         }
+        
+        if (updatedCount > 0) {
+            saveAndRerender();
+            if (action === 'delete') {
+                showToast(`${updatedCount} items permanently deleted.`, 'success');
+            } else {
+                showToast(`${updatedCount} items moved to "${action.replace('-', ' ')}".`, 'success');
+            }
+        }
+
+        exitSelectMode(true);
     };
 
     // Bulk Actions Event Listeners
@@ -1464,29 +1485,38 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
-                const importedData = JSON.parse(event.target.result);
+                const dataToImport = JSON.parse(event.target.result);
                 
-                // Basic validation
-                if (importedData && Array.isArray(importedData.watchlistItems)) {
-                    if (confirm('Are you sure you want to import this file? This will overwrite your current data.')) {
-                        items = importedData.watchlistItems;
-                        activityLog = importedData.activityLog || [];
-                        
-                        saveItems();
-                        localStorage.setItem('activityLog', JSON.stringify(activityLog));
-                        
-                        renderItems();
-                        updateDashboard();
-                        
-                        closeModal('settings');
-                        showToast('Data imported successfully!', 'success');
-                    }
+                if (dataToImport.items && Array.isArray(dataToImport.items)) {
+                    items = dataToImport.items;
+                } else if (Array.isArray(dataToImport)) { // For backwards compatibility with old format
+                    items = dataToImport;
                 } else {
-                    showToast('Invalid file format.', 'error');
+                    throw new Error("Invalid file format.");
                 }
+
+                if (dataToImport.activityLog && Array.isArray(dataToImport.activityLog)) {
+                    activityLog = dataToImport.activityLog;
+                }
+
+                if (dataToImport.goals) {
+                    goals = dataToImport.goals;
+                }
+                if (dataToImport.goalsProgress) {
+                    goalsProgress = dataToImport.goalsProgress;
+                }
+
+                saveItems();
+                saveActivityLog();
+                localStorage.setItem('goals', JSON.stringify(goals));
+                localStorage.setItem('goalsProgress', JSON.stringify(goalsProgress));
+
+                showToast('Watchlist imported successfully!', 'success');
+                exitSelectMode(true); // Exit select mode if active
+                renderItems();
+                updateDashboard();
             } catch (error) {
-                showToast('Error reading or parsing the file.', 'error');
-                console.error('Import error:', error);
+                showToast(`Error importing file: ${error.message}`, 'error');
             }
         };
         reader.readAsText(file);
@@ -1531,22 +1561,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if(confirmDeleteAllFinalBtn) {
         confirmDeleteAllFinalBtn.addEventListener('click', () => {
-            // Clear all data
             items = [];
             activityLog = [];
+            selectedItemIds.clear();
+            
+            // Reset goals to default
+            goals = loadGoals(); 
+            goalsProgress = loadGoalsProgress();
+            
+            saveAndRerender();
+            
+            localStorage.removeItem('goals');
+            localStorage.removeItem('goalsProgress');
 
-            // Save empty arrays to localStorage
-            saveItems();
-            localStorage.removeItem('activityLog');
-
-            // Re-render UI
-            renderItems();
-            updateDashboard();
-
-            // Close all modals
-            closeModal();
-            confirmDeleteAllModal.style.display = 'none'; // Ensure it's hidden
-            showToast('All data has been deleted.', 'success');
+            closeModal(confirmDeleteAllModal);
+            closeModal(settingsModal);
+            exitSelectMode(true);
+            showToast('All data has been permanently deleted.', 'success');
         });
     }
 

@@ -383,22 +383,27 @@ body {
 
 /* Selected Item Card Style */
 .item-card.selected {
-    outline: 3px solid var(--success-color);
-    outline-offset: -2px;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 15px rgba(229, 9, 20, 0.6);
 }
 
-.item-card.selected::after {
-    content: '\\f058'; /* Font Awesome check-circle solid */
-    font-family: 'Font Awesome 6 Free';
-    font-weight: 900;
+.selection-indicator {
     position: absolute;
-    top: 8px;
-    right: 8px;
-    font-size: 1.8rem;
-    color: var(--success-color);
-    background-color: var(--dark-color);
+    top: 15px;
+    right: 15px;
+    font-size: 2rem;
+    color: white;
+    background-color: var(--primary-color);
     border-radius: 50%;
-    text-shadow: 0 0 4px rgba(0,0,0,0.7);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    border: 2px solid white;
+    z-index: 10;
+    animation: scaleIn 0.3s;
 }
 
 .item-card:nth-child(1) { animation-delay: 0.1s; }
@@ -410,7 +415,7 @@ body {
 
 .item-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 
 .item-card-poster {
