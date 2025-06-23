@@ -4,6 +4,7 @@
   "description": "Track your favorite movies, TV shows, anime, and books",
   "main": "index.html",
   "scripts": {
+    "start": "live-server",
     "build": "bubblewrap build",
     "update": "bubblewrap update",
     "validate": "bubblewrap validate"

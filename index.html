@@ -329,6 +329,57 @@
             </div>
         </div>
 
+        <!-- Hedef Düzenleme Modalı -->
+        <div id="goalsModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fas fa-bullseye"></i> Hedeflerini Düzenle</h2>
+                    <button class="close-btn" id="closeGoalsModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="goalsForm">
+                    <div class="goals-form-section">
+                        <h3><i class="fas fa-calendar-alt"></i> Aylık Hedefler</h3>
+                        <div class="form-group">
+                            <label for="monthlyWatching">İzlemeye Başla</label>
+                            <input type="number" id="monthlyWatching" min="0" max="50" placeholder="Örn: 10">
+                            <small>Bu ay kaç yeni içerik izlemeye başlayacaksın?</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="monthlyCompleted">Tamamla</label>
+                            <input type="number" id="monthlyCompleted" min="0" max="50" placeholder="Örn: 5">
+                            <small>Bu ay kaç içeriği tamamlayacaksın?</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="monthlyRating">Ortalama Puan</label>
+                            <input type="number" id="monthlyRating" min="0" max="10" step="0.1" placeholder="Örn: 8.0">
+                            <small>Bu ay verdiğin ortalama puan hedefin?</small>
+                        </div>
+                    </div>
+                    
+                    <div class="goals-form-section">
+                        <h3><i class="fas fa-calendar"></i> Yıllık Hedefler</h3>
+                        <div class="form-group">
+                            <label for="yearlyTotal">Toplam İçerik</label>
+                            <input type="number" id="yearlyTotal" min="0" max="500" placeholder="Örn: 100">
+                            <small>Bu yıl toplam kaç içerik izleyeceksin?</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="yearlyVariety">Farklı Türler</label>
+                            <input type="number" id="yearlyVariety" min="1" max="10" placeholder="Örn: 6">
+                            <small>Bu yıl kaç farklı türde içerik izleyeceksin?</small>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="cancelGoalsBtn">İptal</button>
+                        <button type="submit" class="btn-primary">Hedefleri Kaydet</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- Trailer Modal -->
         <div id="trailerModal" class="modal">
             <div class="modal-content large">
@@ -374,6 +425,23 @@
                             <div class="stat-info"><h3 id="avgRatingModal">0.0</h3><p>Avg Rating</p></div>
                         </div>
                     </div>
+                    
+                    <!-- Hedef Sistemi Bölümü -->
+                    <div class="goals-section">
+                        <div class="goals-header">
+                            <h3><i class="fas fa-bullseye"></i> Bu Ay Hedeflerin</h3>
+                            <button id="editGoalsBtn" class="edit-goals-btn" title="Hedefleri Düzenle">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </div>
+                        <div class="goals-grid" id="goalsGrid">
+                            <!-- Hedef kartları JavaScript ile doldurulacak -->
+                        </div>
+                        <div class="goals-motivation" id="goalsMotivation">
+                            <!-- Motivasyon mesajları JavaScript ile doldurulacak -->
+                        </div>
+                    </div>
+                    
                     <div class="recent-activity">
                         <h3>Recent Activity</h3>
                         <div id="recentActivityListModal" class="activity-list"></div>

@@ -26,6 +26,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const avgRatingModal = document.getElementById('avgRatingModal');
     const recentActivityListModal = document.getElementById('recentActivityListModal');
     
+    // Hedef Sistemi Elementleri
+    const editGoalsBtn = document.getElementById('editGoalsBtn');
+    const goalsModal = document.getElementById('goalsModal');
+    const closeGoalsModal = document.getElementById('closeGoalsModal');
+    const cancelGoalsBtn = document.getElementById('cancelGoalsBtn');
+    const goalsForm = document.getElementById('goalsForm');
+    const goalsGrid = document.getElementById('goalsGrid');
+    const goalsMotivation = document.getElementById('goalsMotivation');
+    
     // Settings Elements
     const openSettingsBtn = document.getElementById('openSettingsBtn');
     const settingsModal = document.getElementById('settingsModal');
@@ -53,6 +62,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelBtn = document.getElementById('cancelBtn');
     const editBtn = document.getElementById('editBtn');
     const deleteBtn = document.getElementById('deleteBtn');
+
+    // Hedef Form Elementleri
+    const monthlyWatching = document.getElementById('monthlyWatching');
+    const monthlyCompleted = document.getElementById('monthlyCompleted');
+    const monthlyRating = document.getElementById('monthlyRating');
+    const yearlyTotal = document.getElementById('yearlyTotal');
+    const yearlyVariety = document.getElementById('yearlyVariety');
 
     // Yeni Öğe Formu
     const addItemForm = document.getElementById('addItemForm');
@@ -111,6 +127,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Dashboard state
     let activityLog = JSON.parse(localStorage.getItem('activityLog')) || [];
+
+    // Hedef Sistemi Veri Yapısı (Güvenli Yükleme)
+    const loadGoals = () => {
+        const defaultGoals = {
+            monthly: { watching: 10, completed: 5, rating: 8.0 },
+            yearly: { total: 100, variety: 6 }
+        };
+        const savedGoals = JSON.parse(localStorage.getItem('goals')) || {};
+        return {
+            monthly: { ...defaultGoals.monthly, ...(savedGoals.monthly || {}) },
+            yearly: { ...defaultGoals.yearly, ...(savedGoals.yearly || {}) },
+        };
+    };
+
+    const loadGoalsProgress = () => {
+        const defaultProgress = {
+            monthly: { watching: 0, completed: 0, rating: 0 },
+            yearly: { total: 0, variety: 0 },
+            lastReset: new Date().toISOString()
+        };
+        const savedProgress = JSON.parse(localStorage.getItem('goalsProgress')) || {};
+        const progress = {
+            monthly: { ...defaultProgress.monthly, ...(savedProgress.monthly || {}) },
+            yearly: { ...defaultProgress.yearly, ...(savedProgress.yearly || {}) },
+            lastReset: savedProgress.lastReset || defaultProgress.lastReset
+        };
+        return progress;
+    };
+
+    let goals = loadGoals();
+    let goalsProgress = loadGoalsProgress();
 
     // --- API Ayarları ---
     // API Anahtarları ve URL'ler artık sunucu tarafındaki fonksiyonda yönetiliyor.
@@ -297,37 +344,217 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Dashboard Functions
-    const updateDashboard = () => {
-        const total = items.length;
-        const completed = items.filter(item => item.status === 'completed').length;
-        const watching = items.filter(item => item.status === 'watching').length;
+    // Hedef Sistemi Fonksiyonları
+    const checkAndResetGoals = () => {
+        const now = new Date();
+        const lastReset = new Date(goalsProgress.lastReset);
         
-        const avgRatingValue = total > 0 ? (items.reduce((sum, item) => sum + (item.rating || 0), 0) / items.filter(i => i.rating > 0).length || 0).toFixed(1) : '0.0';
+        // Aylık sıfırlama kontrolü
+        if (now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear()) {
+            goalsProgress.monthly = {
+                watching: 0,
+                completed: 0,
+                rating: 0
+            };
+            goalsProgress.lastReset = now.toISOString();
+            localStorage.setItem('goalsProgress', JSON.stringify(goalsProgress));
+        }
         
-        totalItemsModal.textContent = total;
-        completedItemsModal.textContent = completed;
-        watchingItemsModal.textContent = watching;
-        avgRatingModal.textContent = avgRatingValue;
-        
-        updateRecentActivity();
-        updateCharts();
+        // Yıllık sıfırlama kontrolü
+        if (now.getFullYear() !== lastReset.getFullYear()) {
+            goalsProgress.yearly = {
+                total: 0,
+                variety: 0
+            };
+        }
     };
 
-    const addActivity = (action, itemTitle, itemType) => {
-        const activity = {
-            id: Date.now(),
-            action,
-            title: itemTitle,
-            type: itemType,
-            timestamp: new Date().toISOString()
-        };
+    const calculateGoalsProgress = () => {
+        checkAndResetGoals();
         
-        activityLog.unshift(activity);
-        if (activityLog.length > 10) activityLog.pop(); // Keep only last 10 activities
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
         
-        localStorage.setItem('activityLog', JSON.stringify(activityLog));
-        updateRecentActivity();
+        // Bu ay eklenen içerikler
+        const thisMonthItems = items.filter(item => {
+            if (!item.dateAdded) return false;
+            const itemDate = new Date(item.dateAdded);
+            if (isNaN(itemDate.getTime())) return false;
+            return itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear;
+        });
+        
+        // Bu ay tamamlanan içerikler
+        const thisMonthCompleted = items.filter(item => {
+            if (item.status !== 'completed' || !item.dateAdded) return false;
+            const itemDate = new Date(item.dateAdded);
+            if (isNaN(itemDate.getTime())) return false;
+            return itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear;
+        });
+        
+        // Bu ay verilen puanlar
+        const thisMonthRatings = items.filter(item => {
+            if (!item.rating || !item.dateAdded) return false;
+            const itemDate = new Date(item.dateAdded);
+            if (isNaN(itemDate.getTime())) return false;
+            return itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear;
+        });
+        
+        // Bu yıl eklenen içerikler
+        const thisYearItems = items.filter(item => {
+            if (!item.dateAdded) return false;
+            const itemDate = new Date(item.dateAdded);
+            if (isNaN(itemDate.getTime())) return false;
+            return itemDate.getFullYear() === currentYear;
+        });
+        
+        // Bu yıl farklı türler
+        const thisYearTypes = new Set(thisYearItems.map(item => item.type));
+        
+        // İlerleme hesaplamaları
+        goalsProgress.monthly.watching = thisMonthItems.length;
+        goalsProgress.monthly.completed = thisMonthCompleted.length;
+        goalsProgress.monthly.rating = thisMonthRatings.length > 0 
+            ? (thisMonthRatings.reduce((sum, item) => sum + item.rating, 0) / thisMonthRatings.length).toFixed(1)
+            : 0;
+        
+        goalsProgress.yearly.total = thisYearItems.length;
+        goalsProgress.yearly.variety = thisYearTypes.size;
+        
+        localStorage.setItem('goalsProgress', JSON.stringify(goalsProgress));
+    };
+
+    const updateGoalsMotivation = () => {
+        if (!goalsMotivation) return;
+
+        let completedCount = 0;
+        let totalActiveGoals = 0;
+
+        Object.keys(goals.monthly).forEach(key => {
+            if (goals.monthly[key] > 0) {
+                totalActiveGoals++;
+                if (goalsProgress.monthly[key] >= goals.monthly[key]) {
+                    completedCount++;
+                }
+            }
+        });
+
+        Object.keys(goals.yearly).forEach(key => {
+            if (goals.yearly[key] > 0) {
+                totalActiveGoals++;
+                if (goalsProgress.yearly[key] >= goals.yearly[key]) {
+                    completedCount++;
+                }
+            }
+        });
+
+        const overallProgress = totalActiveGoals > 0 ? (completedCount / totalActiveGoals) * 100 : 0;
+        
+        let motivationMessage = '';
+        let motivationIcon = '';
+
+        if (totalActiveGoals === 0) {
+            motivationMessage = '🚀 Henüz bir hedef belirlemedin. Başlamak için hedeflerini düzenle!';
+            motivationIcon = '🎯';
+        } else if (overallProgress >= 100) {
+            motivationMessage = '🎉 Harika! Tüm hedeflerini tamamladın!';
+            motivationIcon = '🏆';
+        } else if (overallProgress >= 75) {
+            motivationMessage = '🔥 Çok yakınsın! Son dürtüşü ver!';
+            motivationIcon = '🚀';
+        } else if (overallProgress >= 50) {
+            motivationMessage = '💪 Yarı yoldasın! Devam et!';
+            motivationIcon = '⭐';
+        } else if (overallProgress > 0) {
+            motivationMessage = '🌟 İyi gidiyorsun! Hedeflerine odaklan!';
+            motivationIcon = '🎯';
+        } else {
+            motivationMessage = '🚀 Yeni bir ay, yeni hedefler! Başla!';
+            motivationIcon = '💫';
+        }
+
+        goalsMotivation.innerHTML = `
+            <span class="motivation-icon">${motivationIcon}</span>
+            ${motivationMessage}
+        `;
+    };
+
+    const updateGoals = () => {
+        calculateGoalsProgress();
+        
+        if (!goalsGrid) return;
+        
+        goalsGrid.innerHTML = '';
+        
+        const monthlyGoals = [
+            {
+                key: 'watching',
+                title: 'İzlemeye Başla',
+                icon: '🎬',
+                current: goalsProgress.monthly.watching,
+                target: goals.monthly.watching,
+                color: '#4ecdc4'
+            },
+            {
+                key: 'completed',
+                title: 'Tamamla',
+                icon: '✅',
+                current: goalsProgress.monthly.completed,
+                target: goals.monthly.completed,
+                color: '#45b7d1'
+            },
+            {
+                key: 'rating',
+                title: 'Ortalama Puan',
+                icon: '⭐',
+                current: parseFloat(goalsProgress.monthly.rating),
+                target: goals.monthly.rating,
+                color: '#ff6b6b'
+            }
+        ];
+        
+        const yearlyGoals = [
+            {
+                key: 'total',
+                title: 'Yıllık Toplam',
+                icon: '📊',
+                current: goalsProgress.yearly.total,
+                target: goals.yearly.total,
+                color: '#ff9f43'
+            },
+            {
+                key: 'variety',
+                title: 'Farklı Türler',
+                icon: '🎭',
+                current: goalsProgress.yearly.variety,
+                target: goals.yearly.variety,
+                color: '#10ac84'
+            }
+        ];
+        
+        [...monthlyGoals, ...yearlyGoals].forEach(goal => {
+            if (goal.target <= 0) return;
+            const percentage = Math.min((goal.current / goal.target) * 100, 100);
+            const isCompleted = goal.current >= goal.target;
+            
+            const goalCard = document.createElement('div');
+            goalCard.className = `goal-card ${isCompleted ? 'completed' : ''}`;
+            
+            goalCard.innerHTML = `
+                <span class="goal-icon">${goal.icon}</span>
+                <div class="goal-title">${goal.title}</div>
+                <div class="goal-progress">
+                    <span class="goal-current">${goal.current}</span>/<span class="goal-target">${goal.target}</span>
+                </div>
+                <div class="goal-progress-bar">
+                    <div class="goal-progress-fill" style="width: ${percentage}%; background: ${goal.color}"></div>
+                </div>
+                <div class="goal-percentage">${percentage.toFixed(0)}%</div>
+            `;
+            
+            goalsGrid.appendChild(goalCard);
+        });
+        
+        updateGoalsMotivation();
     };
 
     const updateRecentActivity = () => {
@@ -375,6 +602,61 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    // Dashboard Functions
+    const updateDashboard = () => {
+        try {
+            const total = items.length;
+            const completed = items.filter(item => item.status === 'completed').length;
+            const watching = items.filter(item => item.status === 'watching').length;
+            
+            const avgRatingValue = total > 0 ? (items.reduce((sum, item) => sum + (item.rating || 0), 0) / items.filter(i => i.rating > 0).length || 0).toFixed(1) : '0.0';
+            
+            totalItemsModal.textContent = total;
+            completedItemsModal.textContent = completed;
+            watchingItemsModal.textContent = watching;
+            avgRatingModal.textContent = avgRatingValue;
+        } catch (error) {
+            console.error("Dashboard ana istatistikleri güncellenirken hata:", error);
+        }
+
+        try {
+            updateRecentActivity();
+        } catch (error) {
+            console.error("Son aktiviteler güncellenirken hata:", error);
+        }
+
+        try {
+            updateCharts();
+        } catch (error) {
+            console.error("Grafikler güncellenirken hata:", error);
+        }
+        
+        try {
+            updateGoals();
+        } catch (error) {
+            console.error("Hedefler güncellenirken hata:", error);
+            if (goalsGrid) {
+                goalsGrid.innerHTML = '<p class="error-message">Hedefler yüklenirken bir sorun oluştu. Lütfen konsolu kontrol edin.</p>';
+            }
+        }
+    };
+
+    const addActivity = (action, itemTitle, itemType) => {
+        const activity = {
+            id: Date.now(),
+            action,
+            title: itemTitle,
+            type: itemType,
+            timestamp: new Date().toISOString()
+        };
+        
+        activityLog.unshift(activity);
+        if (activityLog.length > 10) activityLog.pop(); // Keep only last 10 activities
+        
+        localStorage.setItem('activityLog', JSON.stringify(activityLog));
+        updateRecentActivity();
+    };
+
     const getTimeAgo = (date) => {
         const now = new Date();
         const diffInSeconds = Math.floor((now - date) / 1000);
@@ -383,6 +665,40 @@ document.addEventListener('DOMContentLoaded', () => {
         if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
         if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
         return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    };
+
+    const openGoalsModal = () => {
+        // Form alanlarını mevcut hedeflerle doldur
+        monthlyWatching.value = goals.monthly.watching;
+        monthlyCompleted.value = goals.monthly.completed;
+        monthlyRating.value = goals.monthly.rating;
+        yearlyTotal.value = goals.yearly.total;
+        yearlyVariety.value = goals.yearly.variety;
+        
+        goalsModal.style.zIndex = '1001';
+        goalsModal.style.display = 'flex';
+    };
+
+    const closeGoalsModalFunc = () => {
+        goalsModal.style.display = 'none';
+        goalsModal.style.zIndex = '';
+    };
+
+    const saveGoals = (e) => {
+        e.preventDefault();
+        
+        goals.monthly.watching = parseInt(monthlyWatching.value) || 0;
+        goals.monthly.completed = parseInt(monthlyCompleted.value) || 0;
+        goals.monthly.rating = parseFloat(monthlyRating.value) || 0;
+        goals.yearly.total = parseInt(yearlyTotal.value) || 0;
+        goals.yearly.variety = parseInt(yearlyVariety.value) || 0;
+        
+        localStorage.setItem('goals', JSON.stringify(goals));
+        
+        updateGoals();
+        closeGoalsModalFunc();
+        
+        showToast('Hedeflerin başarıyla kaydedildi! 🎯', 'success');
     };
 
     const renderSkeletons = (count) => {
@@ -450,7 +766,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     case 'progress':
                          return (b.progress / b.total * 100) - (a.progress / a.total * 100);
                     default: // date-added
-                        return new Date(b.dateAdded) - new Date(a.dateAdded);
+                        // HATA DÜZELTMESİ: dateAdded olmayan öğeler için güvenli sıralama
+                        const dateA = a.dateAdded ? new Date(a.dateAdded).getTime() : 0;
+                        const dateB = b.dateAdded ? new Date(b.dateAdded).getTime() : 0;
+                        return dateB - dateA;
                 }
             });
     
@@ -609,6 +928,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(statsModal) statsModal.style.display = 'none';
         if(settingsModal) settingsModal.style.display = 'none';
         if(trailerModal) trailerModal.style.display = 'none';
+        if(goalsModal) goalsModal.style.display = 'none'; // Hedef modalını da kapat
     };
     
     // --- Event Listeners ---
@@ -653,6 +973,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             newItemData.id = Date.now();
+            newItemData.dateAdded = new Date().toISOString();
             items.push(newItemData);
             addActivity('add', newItemData.title, newItemData.type);
             showToast('Item added successfully!', 'success');
@@ -950,8 +1271,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Dashboard toggle
     if (openStatsBtn) {
         openStatsBtn.addEventListener('click', () => {
-            updateDashboard();
+            // Önce modalı göster, sonra içeriği doldur. Bu, olası bir hatanın
+            // modalın açılmasını engellemesini önler.
             statsModal.style.display = 'block';
+            updateDashboard();
         });
     }
 
@@ -1313,6 +1636,20 @@ document.addEventListener('DOMContentLoaded', () => {
             closeModal();
             openAddModal(item);
         });
+
+        // Hedef Sistemi Event Listeners
+        if (editGoalsBtn) {
+            editGoalsBtn.addEventListener('click', openGoalsModal);
+        }
+        if (closeGoalsModal) {
+            closeGoalsModal.addEventListener('click', closeGoalsModalFunc);
+        }
+        if (cancelGoalsBtn) {
+            cancelGoalsBtn.addEventListener('click', closeGoalsModalFunc);
+        }
+        if (goalsForm) {
+            goalsForm.addEventListener('submit', saveGoals);
+        }
     };
 
     // --- Başlangıç ---
